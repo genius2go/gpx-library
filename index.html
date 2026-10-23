@@ -336,7 +336,8 @@
   <p>Enter a personal access token with Contents read and write access to this repository. The token stays in this browser and is never included in backups or GitHub files.</p>
   <form id="githubForm">
     <div class="form-group"><label for="githubToken">Personal access token</label><input id="githubToken" type="password" autocomplete="off" spellcheck="false" /></div>
-    <div class="modal-actions"><button class="btn btn-primary" type="submit">Save token and sync</button><button class="btn btn-ghost" id="forgetGitHub" type="button">Forget token</button><button class="btn btn-ghost" id="closeGitHub" type="button">Close</button></div>
+    <p id="githubConnectionStatus" role="status" aria-live="polite"></p>
+    <div class="modal-actions"><button class="btn btn-ghost" id="testGitHub" type="button">Test connection only</button><button class="btn btn-primary" type="submit">Save token and sync</button><button class="btn btn-ghost" id="forgetGitHub" type="button">Forget token</button><button class="btn btn-ghost" id="closeGitHub" type="button">Close</button></div>
   </form>
 </dialog>
 <script src="github-sync.js"></script>
@@ -461,6 +462,8 @@ let deletedTrackIds = [];
 let syncBase = null;
 let syncPending = false;
 let syncBusy = false;
+let authTesting = false;
+let authenticationBlocked = false;
 let syncTimer = null;
 const SYNC_TOKEN_KEY = 'gpx-library-github-token-v1';
 const SYNC_TARGET = {repo:'genius2go/gpx-library',branch:'main',path:'track-library.json'};
@@ -512,7 +515,7 @@ function syncMessage(message,error=false) {
 }
 function queueSync() {
   syncMessage(githubToken?'Changes saved on this device; pending GitHub sync.':'Changes pending. Connect GitHub to save them to the shared library.');
-  clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncLibrary(),1200);
+  clearTimeout(syncTimer);syncTimer=setTimeout(()=>{if(!authenticationBlocked)syncLibrary();},1200);
 }
 function refreshAfterSync() {
   for(const id of selectedLegs)if(!tracks.some(t=>t.id===id))selectedLegs.delete(id);
@@ -529,7 +532,7 @@ function persistSync(doc,base,pending) {
   lastStorageRaw=raw;tracks=doc.tracks;deletedBuiltin=doc.deletedBuiltin||[];deletedTrackIds=doc.deletedTrackIds||[];syncBase=base;syncPending=pending;
 }
 async function syncLibrary() {
-  if(syncBusy || storageLocked)return;
+  if(syncBusy || authTesting || storageLocked)return;
   // Avoid replacing a form the user is currently editing.
   if(editingId || pendingImports)return;
   syncBusy=true;clearTimeout(syncTimer);syncMessage('Checking the shared library on GitHub…');
@@ -567,6 +570,7 @@ async function syncLibrary() {
       return;
     }
   } catch(e) {
+    if(e.status===401)authenticationBlocked=true;
     refreshAfterSync();
     syncMessage('Sync incomplete: '+e.message+' Changes remain on this device; retry with Sync now.',true);
   } finally {syncBusy=false;$('btnSync').disabled=false;}
@@ -922,23 +926,42 @@ function handleShareUrl() {
   }catch(e){report('Shared track could not be loaded: '+e.message,true);return false;}
 }
 function init() {
-  $('btnGitHub').addEventListener('click',()=>{$('githubToken').value='';$('githubToken').placeholder=githubToken?'A token is saved; paste to replace it.':'Paste your GitHub token';$('githubSettings').showModal();});
+  $('btnGitHub').addEventListener('click',()=>{$('githubToken').value='';$('githubToken').placeholder=githubToken?'A token is saved; paste to replace it.':'Paste your GitHub token';$('githubConnectionStatus').textContent='Test connection only checks your GitHub account and repository access. It does not sync or change tracks.';$('githubSettings').showModal();});
   $('closeGitHub').addEventListener('click',()=>$('githubSettings').close());
   $('githubSettings').addEventListener('close',()=>{$('githubToken').value='';});
-  $('githubForm').addEventListener('submit',e=>{
-    e.preventDefault();if(syncBusy){syncMessage('Wait for the current sync to finish.',true);return;}
-    const token=$('githubToken').value.trim();if(!token){syncMessage('Enter a GitHub token.',true);return;}
-    try {localStorage.setItem(SYNC_TOKEN_KEY,token);githubToken=token;$('githubSettings').close();syncLibrary();}
-    catch(_){syncMessage('Could not save the token in this browser.',true);}
+  async function testGitHubConnection(token) {
+    if(syncBusy || authTesting)throw Error('A connection check or sync is already running.');
+    authTesting=true;$('testGitHub').disabled=true;
+    $('githubConnectionStatus').textContent='Checking GitHub account and repository access…';
+    try {
+      const result=await new GPXSync.GitHub({...SYNC_TARGET,token}).checkConnection();
+      authenticationBlocked=false;
+      $('githubConnectionStatus').textContent='Authenticated as '+result.login+'; write access to '+result.repo+' confirmed. No track data was changed.';
+      return result;
+    } finally {authTesting=false;$('testGitHub').disabled=false;}
+  }
+  $('testGitHub').addEventListener('click',async()=>{
+    try {await testGitHubConnection($('githubToken').value.trim()||githubToken);}
+    catch(e){$('githubConnectionStatus').textContent=e.message;}
+  });
+  $('githubForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const token=$('githubToken').value.trim()||githubToken;
+    try {
+      await testGitHubConnection(token);
+      // Keep the previously saved credential if validation fails.
+      try {localStorage.setItem(SYNC_TOKEN_KEY,token);}catch(_){throw Error('GitHub connection succeeded, but this browser could not save the token.');}
+      githubToken=token;$('githubSettings').close();syncLibrary();
+    } catch(e){$('githubConnectionStatus').textContent=e.message;}
   });
   $('forgetGitHub').addEventListener('click',()=>{
-    if(syncBusy){syncMessage('Wait for the current sync to finish.',true);return;}
-    try {localStorage.removeItem(SYNC_TOKEN_KEY);githubToken='';$('githubToken').value='';syncMessage('Token removed from this browser.');}catch(_){syncMessage('Could not remove token.',true);}
+    if(syncBusy || authTesting){$('githubConnectionStatus').textContent='Wait for the current connection check or sync to finish.';return;}
+    try {localStorage.removeItem(SYNC_TOKEN_KEY);githubToken='';authenticationBlocked=false;$('githubToken').value='';syncMessage('Token removed from this browser.');}catch(_){syncMessage('Could not remove token.',true);}
   });
   $('btnSync').addEventListener('click',syncLibrary);
-  window.addEventListener('online',()=>syncLibrary());
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncLibrary();});
-  setInterval(()=>{if(!document.hidden)syncLibrary();},60000);
+  window.addEventListener('online',()=>{if(!authenticationBlocked)syncLibrary();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden && !authenticationBlocked)syncLibrary();});
+  setInterval(()=>{if(!document.hidden && !authenticationBlocked)syncLibrary();},60000);
   load();renderList();const shared=handleShareUrl();if(!shared&&tracks.length)selectTrack(getFiltered()[0].id);
   const dz=$('dropZone');dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
   dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));

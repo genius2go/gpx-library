@@ -71,16 +71,34 @@
   }
   class GitHub {
     constructor({repo,branch,path,token,fetchImpl=fetch}) {
-      this.branch=branch;this.token=token;this.fetch=(url,options)=>fetchImpl(url,options);
+      this.repo=repo;this.branch=branch;this.token=token;this.fetch=(url,options)=>fetchImpl(url,options);
       this.url='https://api.github.com/repos/'+repo.split('/').map(encodeURIComponent).join('/')+'/contents/'+path.split('/').map(encodeURIComponent).join('/');
     }
     async request(url,options={}) {
       const response=await this.fetch(url,{...options,cache:'no-store',signal:AbortSignal.timeout(30000),headers:{Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(this.token?{Authorization:'Bearer '+this.token}:{}),...options.headers}});
       if(!response.ok) {
-        const error=new Error(response.status===401?'GitHub rejected this token.':response.status===403?'GitHub denied access or reached its request limit.':response.status===404?'Shared file not found, or this token cannot access it.':response.status===409||response.status===422?'The shared file changed during saving.':'GitHub request failed ('+response.status+').');
+        // Preserve GitHub's explanation without exposing the credential or request headers.
+        let detail='';
+        try {const body=await response.json();if(typeof body.message==='string')detail=body.message;} catch(_) {}
+        if(this.token)detail=detail.split(this.token).join('[redacted]');
+        detail=detail.replace(/(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)/g,'[redacted]').slice(0,300);
+        const stage=url==='https://api.github.com/user'?'account authentication':url.includes('/git/blobs/')?'shared file download':options.method==='PUT'?'shared file save':'repository access';
+        const summary=response.status===401?'Authentication failed':response.status===403?'Access denied or request limit reached':response.status===404?'Requested resource unavailable':response.status===409||response.status===422?'Save conflict or validation failure':'GitHub request failed';
+        const error=new Error(summary+' during '+stage+' (HTTP '+response.status+')'+(detail?': '+detail:'.'));
+        error.stage=stage;
         error.status=response.status;throw error;
       }
       return response;
+    }
+    async checkConnection() {
+      if(!this.token)throw Error('No GitHub token is saved in this browser.');
+      // GET requests only: do not save, merge, or upload any track data.
+      const account=await (await this.request('https://api.github.com/user')).json();
+      if(typeof account.login!=='string')throw Error('GitHub did not return an authenticated account.');
+      const repoUrl='https://api.github.com/repos/'+this.repo.split('/').map(encodeURIComponent).join('/');
+      const repository=await (await this.request(repoUrl)).json();
+      if(repository.permissions?.push!==true)throw Error('Authenticated as '+account.login+', but GitHub did not confirm write access to '+this.repo+'.');
+      return {login:account.login,repo:this.repo};
     }
     async read() {
       const url=this.url+'?ref='+encodeURIComponent(this.branch);
