@@ -217,6 +217,10 @@
       .detail-heading { flex-wrap:wrap; }
     }
 
+    #githubSettings { margin:auto; color:var(--foam); width:560px; max-width:calc(100vw - 32px); }
+    #githubSettings::backdrop { background:rgba(0,0,0,.75); }
+    #githubSettings p { margin:12px 0; line-height:1.6; overflow-wrap:anywhere; }
+    #githubSettings .modal-actions { flex-wrap:wrap; }
   </style>
 </head>
 <body>
@@ -227,6 +231,8 @@
     <div class="header-sub">Formula 40PC · Miami Beach</div>
   </div>
   <div class="header-right">
+    <button class="btn btn-primary" id="btnGitHub" type="button">GitHub sync</button>
+    <button class="btn btn-ghost" id="btnSync" type="button">Sync now</button>
     <button class="btn btn-ghost" id="btnMapSettings" type="button">Map settings</button>
     <button class="btn btn-ghost" id="btnBackup" type="button">Back up library</button>
     <label class="btn btn-ghost" for="restoreInput">Restore backup<input id="restoreInput" type="file" accept=".json,application/json" hidden /></label>
@@ -235,6 +241,7 @@
   </div>
 </header>
 
+<div id="syncStatus" class="library-status" role="status" aria-live="polite">Connecting to the shared library…</div>
 <div id="libraryStatus" class="library-status" role="status" aria-live="polite" hidden></div>
 <div class="shell">
   <aside class="sidebar">
@@ -323,6 +330,16 @@
   </div>
 </div>
 
+<dialog id="githubSettings" class="modal" aria-labelledby="githubTitle">
+  <h2 id="githubTitle">Shared library on GitHub</h2>
+  <p>All devices use genius2go/gpx-library · main · track-library.json.</p>
+  <p>Enter a personal access token with Contents read and write access to this repository. The token stays in this browser and is never included in backups or GitHub files.</p>
+  <form id="githubForm">
+    <div class="form-group"><label for="githubToken">Personal access token</label><input id="githubToken" type="password" autocomplete="off" spellcheck="false" /></div>
+    <div class="modal-actions"><button class="btn btn-primary" type="submit">Save token and sync</button><button class="btn btn-ghost" id="forgetGitHub" type="button">Forget token</button><button class="btn btn-ghost" id="closeGitHub" type="button">Close</button></div>
+  </form>
+</dialog>
+<script src="github-sync.js"></script>
 <script>
 // ══════════════════════════════════════════════════════
 //  BUILT-IN TRACKS  (Miami → East Falmouth, June 2026)
@@ -440,6 +457,16 @@ if (!cartoKey) document.getElementById('btnMapSettings').textContent = 'Map sett
 
 // Track storage is transactional: a failed write never reports success or changes the library.
 let deletedBuiltin = [];
+let deletedTrackIds = [];
+let syncBase = null;
+let syncPending = false;
+let syncBusy = false;
+let syncTimer = null;
+const SYNC_TOKEN_KEY = 'gpx-library-github-token-v1';
+const SYNC_TARGET = {repo:'genius2go/gpx-library',branch:'main',path:'track-library.json'};
+let githubToken = '';
+try {githubToken=localStorage.getItem(SYNC_TOKEN_KEY)||'';} catch (_) {}
+
 let storageLocked = false;
 let lastStorageRaw = null;
 let pendingImports = false;
@@ -477,7 +504,73 @@ function validateTracks(list) {
   if (new Set(list.map(t=>t.id)).size!==list.length) throw Error('Duplicate track IDs in the library.');
   return list;
 }
-function libraryPayload(list=tracks, deleted=deletedBuiltin) { return {version:2, tracks:list, deletedBuiltin:deleted}; }
+function libraryPayload(list=tracks, deleted=deletedBuiltin) { return {version:2, tracks:list, deletedBuiltin:deleted, deletedTrackIds}; }
+function syncMessage(message,error=false) {
+  $('syncStatus').textContent=message;
+  $('syncStatus').classList.toggle('error',error);
+  $('btnSync').disabled=syncBusy;
+}
+function queueSync() {
+  syncMessage(githubToken?'Changes saved on this device; pending GitHub sync.':'Changes pending. Connect GitHub to save them to the shared library.');
+  clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncLibrary(),1200);
+}
+function refreshAfterSync() {
+  for(const id of selectedLegs)if(!tracks.some(t=>t.id===id))selectedLegs.delete(id);
+  renderList();
+  if(activeId && tracks.some(t=>t.id===activeId))selectTrack(activeId,false);
+  else if(tracks.length)selectTrack(getFiltered()[0]?.id || tracks[0].id,false);
+  else {activeId=null;mapLayers.forEach(l=>map?.removeLayer(l));mapLayers=[];$('trackDetail').classList.remove('visible');$('mapPlaceholder').style.display='flex';}
+}
+function persistSync(doc,base,pending) {
+  validateTracks(doc.tracks);
+  if(localStorage.getItem(STORAGE_KEY)!==lastStorageRaw)throw Error('Another tab changed this library. Reload before syncing.');
+  const raw=JSON.stringify({...doc,_sync:{base,pending}});
+  localStorage.setItem(STORAGE_KEY,raw);
+  lastStorageRaw=raw;tracks=doc.tracks;deletedBuiltin=doc.deletedBuiltin||[];deletedTrackIds=doc.deletedTrackIds||[];syncBase=base;syncPending=pending;
+}
+async function syncLibrary() {
+  if(syncBusy || storageLocked)return;
+  // Avoid replacing a form the user is currently editing.
+  if(editingId || pendingImports)return;
+  syncBusy=true;clearTimeout(syncTimer);syncMessage('Checking the shared library on GitHub…');
+  try {
+    const api=new GPXSync.GitHub({...SYNC_TARGET,token:githubToken});
+    for(let attempt=0;attempt<3;attempt++) {
+      const remote=await api.read();GPXSync.validate(remote.doc,validateTracks);
+      let local=libraryPayload(),base=syncBase;
+      if(!lastStorageRaw && !syncPending)local={version:2,tracks:[],deletedBuiltin:[],deletedTrackIds:[]};
+      // The three audited backups are already included in the shared seed. Recognize
+      // only exact snapshots; unknown or subsequently edited libraries are merged conservatively.
+      if(!base && lastStorageRaw) {
+        const migration=await fetch('migration-baselines.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+        const sourceHash=await GPXSync.digest({tracks:local.tracks,deletedBuiltin:local.deletedBuiltin});
+        if(migration?.sourceBackupHashes?.includes(sourceHash))base=await GPXSync.fingerprints(local.tracks);
+      }
+      const {doc,conflicts}=await GPXSync.merge(base,local,remote.doc);
+      const remoteCore={version:2,tracks:remote.doc.tracks,deletedBuiltin:remote.doc.deletedBuiltin||[],deletedTrackIds:remote.doc.deletedTrackIds||[]};
+      const needsWrite=GPXSync.canonical(doc)!==GPXSync.canonical(remoteCore);
+      if(needsWrite && !githubToken) {
+        // Keep the old baseline: without a successful upload, these remain pending changes.
+        persistSync(doc,syncBase,true);refreshAfterSync();
+        syncMessage('Shared tracks loaded. Local changes are pending; connect a GitHub token to save them.',true);return;
+      }
+      // Save a recoverable local snapshot BEFORE uploading. A failed PUT remains pending.
+      const newBase=await GPXSync.fingerprints(remote.doc.tracks);
+      persistSync(doc,newBase,needsWrite);
+      if(needsWrite) {
+        try {await api.write(doc,remote.sha);}
+        catch(e) {if((e.status===409 || e.status===422) && attempt<2)continue;throw e;}
+      }
+      persistSync(doc,await GPXSync.fingerprints(doc.tracks),false);refreshAfterSync();
+      const unresolved=doc.tracks.filter(t=>t.syncConflictOf).length;
+      syncMessage('Synced with GitHub · '+doc.tracks.length+' tracks'+(unresolved?' · '+unresolved+' conflict copies need review.':'.'),!!unresolved);
+      return;
+    }
+  } catch(e) {
+    refreshAfterSync();
+    syncMessage('Sync incomplete: '+e.message+' Changes remain on this device; retry with Sync now.',true);
+  } finally {syncBusy=false;$('btnSync').disabled=false;}
+}
 function load() {
   tracks = BUILTIN_TRACKS.map(t=>({...t}));
   try {
@@ -485,8 +578,10 @@ function load() {
     if (!lastStorageRaw) { report('Library ready. Back up your library before clearing browser data.'); return; }
     const data=JSON.parse(lastStorageRaw);
     const saved=validateTracks(Array.isArray(data) ? data : data.version===2 ? data.tracks : null);
+    deletedTrackIds=Array.isArray(data.deletedTrackIds)?data.deletedTrackIds:[];
+    syncBase=data._sync?.base||null;syncPending=!!data._sync?.pending;
     deletedBuiltin = Array.isArray(data.deletedBuiltin) ? data.deletedBuiltin.filter(x=>typeof x==='string') : [];
-    const merged = new Map(tracks.filter(t=>!deletedBuiltin.includes(t.id)).map(t=>[t.id,t]));
+    const merged = new Map((data._sync ? [] : tracks.filter(t=>!deletedBuiltin.includes(t.id)&&!deletedTrackIds.includes(t.id))).map(t=>[t.id,t]));
     saved.forEach(t=>merged.set(t.id,t)); tracks=[...merged.values()];
     report(`Loaded ${tracks.length} tracks from this browser. Back up regularly.`);
   } catch(e) {
@@ -494,15 +589,18 @@ function load() {
     report('Could not read your saved library: '+e.message+' Existing browser data has been left untouched. Use Back up to preserve recovery data, then Restore a valid backup.',true);
   }
 }
-function commitLibrary(next, deleted=deletedBuiltin, recovery=false) {
+function commitLibrary(next, deleted=deletedBuiltin, recovery=false, extraDeleted=[]) {
+  if(syncBusy){report('Sync is in progress. Your edit is still open; try saving again in a moment.',true);return false;}
   if (storageLocked && !recovery) { report('Saving is blocked to protect unreadable library data. Back up recovery data, then restore a valid library.',true); return false; }
   try {
     validateTracks(next);
     const current=localStorage.getItem(STORAGE_KEY);
     if (current!==lastStorageRaw) throw Error('The library changed in another tab. Reload this page before trying again.');
-    const raw=JSON.stringify(libraryPayload(next,deleted));
+    const removed=tracks.filter(t=>!next.some(n=>n.id===t.id)).map(t=>t.id);
+    const tombstones=[...new Set([...deletedTrackIds,...removed,...deleted,...extraDeleted])].filter(id=>!next.some(t=>t.id===id));
+    const raw=JSON.stringify({...libraryPayload(next,deleted),deletedTrackIds:tombstones,_sync:{base:syncBase,pending:true}});
     localStorage.setItem(STORAGE_KEY,raw);
-    lastStorageRaw=raw; tracks=next; deletedBuiltin=deleted; storageLocked=false;
+    lastStorageRaw=raw; tracks=next; deletedBuiltin=deleted; deletedTrackIds=tombstones; storageLocked=false;syncPending=true;queueSync();
     return true;
   } catch(e) {
     report('NOT SAVED: '+e.message+' Your previous library is unchanged. Keep the original file or your edit open, and back up the library before freeing browser storage.',true);
@@ -743,10 +841,10 @@ function backupLibrary() {
 async function restoreLibrary(file) {
   try {
     const data=JSON.parse(await file.text());if(data.version!==2)throw Error('Choose a version 2 Track Library backup.');
-    validateTracks(data.tracks);
+    GPXSync.validate(data,validateTracks);
     if(!Array.isArray(data.deletedBuiltin) || !data.deletedBuiltin.every(x=>typeof x==='string'))throw Error('Invalid deleted-track record.');
     if(!confirm(`Replace this browser’s library with ${data.tracks.length} tracks from the backup? Back up the current library first if needed.`))return;
-    if(!commitLibrary(data.tracks,data.deletedBuiltin,true))return;
+    if(!commitLibrary(data.tracks,data.deletedBuiltin,true,data.deletedTrackIds||[]))return;
     selectedLegs.clear();activeId=null;renderList();
     if(tracks.length)selectTrack(getFiltered()[0].id);else{$('trackDetail').classList.remove('visible');mapLayers.forEach(l=>map.removeLayer(l));mapLayers=[];}
     report(`Restored and saved ${tracks.length} tracks. Your map key was not changed.`);
@@ -824,6 +922,23 @@ function handleShareUrl() {
   }catch(e){report('Shared track could not be loaded: '+e.message,true);return false;}
 }
 function init() {
+  $('btnGitHub').addEventListener('click',()=>{$('githubToken').value='';$('githubToken').placeholder=githubToken?'A token is saved; paste to replace it.':'Paste your GitHub token';$('githubSettings').showModal();});
+  $('closeGitHub').addEventListener('click',()=>$('githubSettings').close());
+  $('githubSettings').addEventListener('close',()=>{$('githubToken').value='';});
+  $('githubForm').addEventListener('submit',e=>{
+    e.preventDefault();if(syncBusy){syncMessage('Wait for the current sync to finish.',true);return;}
+    const token=$('githubToken').value.trim();if(!token){syncMessage('Enter a GitHub token.',true);return;}
+    try {localStorage.setItem(SYNC_TOKEN_KEY,token);githubToken=token;$('githubSettings').close();syncLibrary();}
+    catch(_){syncMessage('Could not save the token in this browser.',true);}
+  });
+  $('forgetGitHub').addEventListener('click',()=>{
+    if(syncBusy){syncMessage('Wait for the current sync to finish.',true);return;}
+    try {localStorage.removeItem(SYNC_TOKEN_KEY);githubToken='';$('githubToken').value='';syncMessage('Token removed from this browser.');}catch(_){syncMessage('Could not remove token.',true);}
+  });
+  $('btnSync').addEventListener('click',syncLibrary);
+  window.addEventListener('online',()=>syncLibrary());
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncLibrary();});
+  setInterval(()=>{if(!document.hidden)syncLibrary();},60000);
   load();renderList();const shared=handleShareUrl();if(!shared&&tracks.length)selectTrack(getFiltered()[0].id);
   const dz=$('dropZone');dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
   dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
@@ -847,6 +962,7 @@ function init() {
   window.addEventListener('storage',e=>{if(e.key===STORAGE_KEY)report('The library changed in another tab. Reload before editing or importing; this tab will not overwrite those changes.',true);});
   window.addEventListener('unhandledrejection',()=>report('An operation did not complete. Check the last action and keep the original file; no success has been confirmed.',true));
   window.addEventListener('error',()=>report('An unexpected error occurred. Back up your library and reload before continuing.',true));
+  syncLibrary();
   if(map && window.ResizeObserver) new ResizeObserver(()=>map.invalidateSize()).observe($('map'));
   if(!map) report('Map library could not load. Your track reference and saved data remain available. Check the connection and reload to restore the map.',true);
 }
