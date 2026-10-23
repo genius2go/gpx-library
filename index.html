@@ -25,6 +25,9 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--ink); color: var(--foam); font-family: var(--mono); font-size: 13px; line-height: 1.6; min-height: 100vh; }
 
+    #mapSettings::backdrop { background: rgba(0,0,0,.75); }
+    @media (max-width: 450px) { .header-right { flex-wrap: wrap; justify-content: flex-end; } }
+
     /* ── Header ── */
     .site-header {
       background: var(--ink-mid);
@@ -152,6 +155,7 @@
     <div class="header-sub">Formula 40PC · Miami Beach</div>
   </div>
   <div class="header-right">
+    <button class="btn btn-ghost" id="btnMapSettings" type="button">Map settings</button>
     <span id="headerCount" style="font-size:10px;color:#4a7a9b;text-transform:uppercase;letter-spacing:.06em"></span>
   </div>
 </header>
@@ -196,6 +200,23 @@
     </div>
   </main>
 </div>
+
+<dialog id="mapSettings" class="modal" aria-labelledby="mapSettingsTitle" style="margin:auto;color:var(--foam)">
+  <form id="mapSettingsForm">
+    <h2 id="mapSettingsTitle">Map settings</h2>
+    <div class="form-group">
+      <label for="cartoKey">CARTO Basemaps API key</label>
+      <input id="cartoKey" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="cartoHelp" />
+    </div>
+    <p id="cartoHelp" style="font-size:11px;color:#8ab4cc">Saved in this browser only and sent to CARTO for map tiles. Use a Basemaps key, not a private CARTO platform token. In CARTO's website restrictions, allow <strong>genius2go.github.io</strong> (no path). <a href="https://www.carto.com/basemaps/apikey/" target="_blank" rel="noopener noreferrer" style="color:var(--wake)">Get a Basemaps key</a>.</p>
+    <p id="mapKeyStatus" role="status" aria-live="polite" style="font-size:11px;color:#8ab4cc;margin-top:10px"></p>
+    <div class="modal-actions" style="flex-wrap:wrap">
+      <button class="btn btn-ghost" id="btnClearMapKey" type="button">Forget key</button>
+      <button class="btn btn-ghost" id="btnCloseMapSettings" type="button">Close</button>
+      <button class="btn btn-primary" type="submit">Save &amp; load map</button>
+    </div>
+  </form>
+</dialog>
 
 <div class="toast" id="toast"></div>
 
@@ -252,13 +273,79 @@ let editingId = null;
 
 // ── Map ──
 const map = L.map('map', { center: [35, -75], zoom: 5, zoomControl: true });
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap contributors © CARTO', subdomains: 'abcd', maxZoom: 19
-}).addTo(map);
-L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { opacity: 0.4, maxZoom: 18 }).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-  subdomains: 'abcd', maxZoom: 19, opacity: 0.6
-}).addTo(map);
+const MAP_KEY_STORAGE = 'gpx_library_carto_key_v1';
+const mapSettings = document.getElementById('mapSettings');
+const cartoKeyInput = document.getElementById('cartoKey');
+const mapKeyStatus = document.getElementById('mapKeyStatus');
+let cartoKey = '';
+let mapKeyMessage = 'Paste your CARTO Basemaps key to load the dark map and labels.';
+try { cartoKey = (localStorage.getItem(MAP_KEY_STORAGE) || '').trim(); }
+catch (e) { mapKeyMessage = 'Browser storage is unavailable. You can still load a key for this visit.'; }
+const cartoBase = L.tileLayer('', {
+  attribution: '© OpenStreetMap contributors © CARTO', subdomains: 'abcd', maxZoom: 19,
+  referrerPolicy: 'strict-origin-when-cross-origin'
+});
+L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { opacity: 0.4, maxZoom: 18, zIndex: 2 }).addTo(map);
+const cartoLabels = L.tileLayer('', {
+  subdomains: 'abcd', maxZoom: 19, opacity: 0.6,
+  referrerPolicy: 'strict-origin-when-cross-origin'
+});
+// Explicit order keeps labels above seamarks after a key change.
+cartoBase.setZIndex(1);
+cartoLabels.setZIndex(3);
+function applyMapKey() {
+  [cartoBase, cartoLabels].forEach(layer => {
+    if (map.hasLayer(layer)) map.removeLayer(layer);
+  });
+  if (!cartoKey) return;
+  const suffix = '/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(cartoKey);
+  cartoBase.setUrl('https://{s}.basemaps.cartocdn.com/dark_nolabels' + suffix).addTo(map);
+  cartoLabels.setUrl('https://{s}.basemaps.cartocdn.com/dark_only_labels' + suffix).addTo(map);
+}
+[cartoBase, cartoLabels].forEach(layer => layer.on('tileerror', () => {
+  mapKeyMessage = 'CARTO tiles could not load. Check the Basemaps key, allowed host genius2go.github.io, quota, and connection.';
+  mapKeyStatus.textContent = mapKeyMessage;
+  document.getElementById('btnMapSettings').textContent = 'Map settings ⚠';
+}));
+document.getElementById('btnMapSettings').addEventListener('click', () => {
+  cartoKeyInput.value = cartoKey;
+  mapKeyStatus.textContent = mapKeyMessage;
+  mapSettings.showModal();
+  cartoKeyInput.focus();
+});
+document.getElementById('btnCloseMapSettings').addEventListener('click', () => mapSettings.close());
+mapSettings.addEventListener('close', () => { cartoKeyInput.value = ''; });
+document.getElementById('mapSettingsForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const nextKey = cartoKeyInput.value.trim();
+  if (!nextKey) {
+    mapKeyStatus.textContent = 'Paste a key, or choose Forget key to remove the saved key.';
+    cartoKeyInput.focus();
+    return;
+  }
+  cartoKey = nextKey;
+  mapKeyMessage = 'Key saved in this browser. Loading CARTO tiles…';
+  try { localStorage.setItem(MAP_KEY_STORAGE, cartoKey); }
+  catch (e) { mapKeyMessage = 'Key loaded for this visit only. Browser storage is unavailable; it will not survive a reload.'; }
+  mapKeyStatus.textContent = mapKeyMessage;
+  document.getElementById('btnMapSettings').textContent = 'Map settings';
+  applyMapKey();
+});
+document.getElementById('btnClearMapKey').addEventListener('click', () => {
+  try { localStorage.removeItem(MAP_KEY_STORAGE); }
+  catch (e) {
+    mapKeyStatus.textContent = 'Could not remove the saved key. Enable browser storage or clear this site’s browser data.';
+    return;
+  }
+  cartoKey = '';
+  cartoKeyInput.value = '';
+  mapKeyMessage = 'Key removed from this browser. Paste a key to load the dark map and labels.';
+  mapKeyStatus.textContent = mapKeyMessage;
+  document.getElementById('btnMapSettings').textContent = 'Map settings';
+  applyMapKey();
+});
+applyMapKey();
+if (!cartoKey) document.getElementById('btnMapSettings').textContent = 'Map settings · Add key';
 
 // ── Storage ──
 function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tracks.filter(t => !t.builtin))); } catch(e) {} }
