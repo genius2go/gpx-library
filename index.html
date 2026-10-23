@@ -83,7 +83,7 @@
     .ti-meta { font-size: 10px; color: #4a7a9b; margin-top: 2px; }
     .ti-tags { margin-top: 4px; display: flex; gap: 3px; flex-wrap: wrap; }
     .tag { background: rgba(26,58,92,.8); border: 1px solid #2a5f8f; border-radius: 2px; color: var(--wake); font-size: 9px; padding: 1px 5px; text-transform: uppercase; letter-spacing: .05em; }
-    .tag.builtin { border-color: #2a6f5f; color: #4aeca0; }
+
     .ti-delete { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #2a4a65; font-size: 13px; cursor: pointer; padding: 2px 4px; border-radius: 2px; transition: color .15s; }
     .ti-delete:hover { color: var(--red); }
 
@@ -145,6 +145,78 @@
       .shell { grid-template-columns: 1fr; grid-template-rows: 260px 1fr; }
       .sidebar { border-right: none; border-bottom: 1px solid #1e3a55; }
     }
+
+    /* Reference workspace: keep the library scroll independent of the detail card. */
+    body { height:100vh; height:100dvh; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+    .site-header { position:static; flex-shrink:0; padding:12px 18px; flex-wrap:wrap; }
+    .header-right { flex-wrap:wrap; justify-content:flex-end; }
+    .header-sub { color:#91adc0; }
+    .shell { flex:1; min-height:0; height:auto; grid-template-columns:310px minmax(0,1fr); }
+    .sidebar,.map-panel,.track-list { min-height:0; min-width:0; }
+    .map-panel { overflow:hidden; }
+    .map-stage { position:relative; display:flex; flex:1; min-height:180px; }
+    #map { min-height:180px; }
+    .track-list { flex:1; }
+    .library-status { flex-shrink:0; padding:7px 18px; background:#142b3a; color:#b5d2df; font-size:11px; max-height:90px; overflow:auto; border-bottom:1px solid #2a4a60; }
+    .library-status.error { background:#402627; color:#ffd6c7; border-color:#9b6254; }
+    .track-item { padding:12px 14px; cursor:default; }
+    .sidebar.comparing .track-item { padding-left:36px; }
+    .sidebar.comparing .leg-check { display:block; }
+    .track-item.active { padding-left:12px; }
+    .sidebar.comparing .track-item.active { padding-left:34px; }
+    .track-select { display:block; text-align:left; background:none; border:0; width:100%; color:inherit; cursor:pointer; font-family:inherit; }
+    .ti-name { display:block; white-space:normal; padding:0; line-height:1.5; }
+    .ti-meta { display:block; color:#94b7cb; line-height:1.7; }
+    .leg-check { display:none; position:absolute; top:17px; left:12px; }
+    input[type=checkbox] { accent-color:var(--wake); width:14px; height:14px; }
+    .tag { color:#8ed0ed; border-color:#47748c; }
+    .track-detail { background:#132638; padding:18px 22px; border-top:1px solid #36566c; max-height:48vh; overflow:auto; }
+    .detail-heading { display:flex; gap:12px; align-items:flex-start; justify-content:space-between; margin-bottom:14px; }
+    .detail-kicker { font-size:10px; text-transform:uppercase; color:#9db7c8; letter-spacing:.1em; }
+    .td-name { margin:4px 0 0; font-size:18px; line-height:1.45; }
+    .td-stats { grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px 18px; margin:0; }
+    .metric dt { color:#a8c1d1; font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
+    .metric dd { color:#e1f2f9; font-size:18px; font-weight:600; overflow-wrap:anywhere; margin:3px 0; }
+    .metric small { color:#8ba9bc; font-size:10px; line-height:1.5; display:block; }
+    .td-actions { gap:8px; margin-top:16px; padding-top:14px; }
+    .btn { padding:8px 10px; text-transform:none; letter-spacing:0; font-size:11px; }
+    .btn-danger { color:#f5b9b2; border-color:#744d4a; }
+    button:focus-visible,summary:focus-visible,input:focus-visible { outline:2px solid #8ed0ed; outline-offset:3px; }
+    details { margin-top:14px; border-top:1px solid #2c475c; padding-top:10px; }
+    summary { color:#acd0e2; cursor:pointer; font-size:11px; }
+    details .td-stats { margin-top:14px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+    details .metric dd { font-size:12px; }
+    .data-quality { color:#aec5d4; font-size:11px; line-height:1.7; margin-top:10px; }
+    .data-quality p+p { margin-top:6px; }
+    .td-notes { font-style:normal; color:#c1d6e2; font-size:12px; white-space:pre-wrap; }
+    .export-hint { color:#94afc0; font-size:10px; }
+    .leg-tools { flex-shrink:0; border-top:1px solid #36566c; padding:10px 14px; font-size:11px; color:#b3cbd9; max-height:36vh; overflow:auto; }
+    .leg-tools p { margin:8px 0; }
+    .leg-tools details { margin-top:8px; }
+    .planning-inputs { display:flex; gap:8px; margin-top:10px; }
+    .planning-inputs label { flex:1; font-size:10px; }
+    .planning-inputs input { display:block; margin-top:4px; width:100%; padding:6px; background:#0d1b2a; border:1px solid #41647a; border-radius:4px; color:#e8f4f8; }
+    .list-meta,.sort-btn { color:#9cb9ca; }
+    .modal { max-height:90dvh; overflow:auto; }
+    .modal label { color:#a8c1d1; }
+    @media(max-width:1050px) { .td-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } details .td-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:700px) {
+      body { height:auto; min-height:100dvh; overflow:auto; }
+      .site-header { gap:10px; }
+      .header-right { margin-left:0; justify-content:flex-start; }
+      .shell { display:flex; flex-direction:column; overflow:visible; flex:none; }
+      .sidebar { height:auto; overflow:visible; }
+      .track-list { min-height:180px; max-height:320px; flex:none; overflow:auto; }
+      .leg-tools { max-height:none; }
+      .map-panel { overflow:visible; }
+      .map-stage,#map { height:330px; flex:none; }
+      .track-detail { max-height:none; padding:18px; }
+      .library-status { max-height:none; }
+      .td-name { font-size:16px; }
+      .metric dd { font-size:16px; }
+      .detail-heading { flex-wrap:wrap; }
+    }
+
   </style>
 </head>
 <body>
@@ -156,10 +228,14 @@
   </div>
   <div class="header-right">
     <button class="btn btn-ghost" id="btnMapSettings" type="button">Map settings</button>
+    <button class="btn btn-ghost" id="btnBackup" type="button">Back up library</button>
+    <label class="btn btn-ghost" for="restoreInput">Restore backup<input id="restoreInput" type="file" accept=".json,application/json" hidden /></label>
+    <button class="btn btn-ghost" id="btnCSV" type="button">Export summary CSV</button>
     <span id="headerCount" style="font-size:10px;color:#4a7a9b;text-transform:uppercase;letter-spacing:.06em"></span>
   </div>
 </header>
 
+<div id="libraryStatus" class="library-status" role="status" aria-live="polite" hidden></div>
 <div class="shell">
   <aside class="sidebar">
     <div class="sidebar-top">
@@ -178,26 +254,39 @@
       <button class="sort-btn" id="sortBtn">Date ↓</button>
     </div>
     <div class="track-list" id="trackList"></div>
-    <div class="track-detail" id="trackDetail">
-      <div class="td-name" id="tdName"></div>
-      <div class="td-stats" id="tdStats"></div>
-      <div class="td-notes" id="tdNotes" style="display:none"></div>
-      <div class="td-actions">
-        <button class="btn btn-primary" id="btnShare">↑ Share</button>
-        <button class="btn btn-ghost" id="btnDownloadTrack">↓ Track</button>
-        <button class="btn btn-ghost" id="btnDownloadRoute">↓ Route</button>
-        <button class="btn btn-ghost" id="btnEdit">✎ Edit</button>
-      </div>
-      <div class="export-hint">Track = raw GPX for your Axiom · Route = 50 wpts for Garmin/sharing</div>
-    </div>
+    <section class="leg-tools" aria-label="Optional multiple-leg comparison">
+      <details id="legTools"><summary>Optional: compare multiple legs</summary><p>Totals only; tracks stay separate.</p>
+      <div><button class="btn btn-ghost" id="btnSelectVisible">Select visible</button> <button class="btn btn-ghost" id="btnClearLegs">Clear selection</button></div>
+      <p id="legSummary"></p>
+      <details><summary>Plan selected legs</summary>
+        <div class="planning-inputs"><label>Cruise speed (kn)<input id="planSpeed" type="number" min="0.1" step="0.1" placeholder="e.g. 24" /></label><label>Fuel burn (US gal/h)<input id="planBurn" type="number" min="0" step="0.1" placeholder="Optional" /></label></div>
+        <p id="planResult"></p>
+      </details></details>
+    </section>
   </aside>
 
   <main class="map-panel">
-    <div id="map"></div>
+    <div class="map-stage"><div id="map"></div>
     <div class="map-placeholder" id="mapPlaceholder">
       <div class="mp-icon">⚓</div>
       <p>Select a track to view it on the chart</p>
     </div>
+    </div>
+    <section class="track-detail" id="trackDetail" aria-label="Selected track reference">
+      <div class="detail-heading"><div><div class="detail-kicker">Track reference</div><h1 class="td-name" id="tdName"></h1></div><button class="btn btn-ghost" id="btnEdit">Edit details</button></div>
+      <dl class="td-stats" id="tdStats"></dl>
+      <details><summary>Timing, positions &amp; source data</summary><div id="tdMore"></div></details>
+      <details open><summary>Data quality &amp; calculation notes</summary><div class="data-quality" id="dataQuality"></div></details>
+      <p class="td-notes" id="tdNotes" hidden></p>
+      <div class="td-actions">
+        <button class="btn btn-primary" id="btnDownloadTrack">Download original GPX</button>
+        <button class="btn btn-ghost" id="btnPoints">Export point CSV</button>
+        <button class="btn btn-ghost" id="btnDownloadRoute">Export simplified route</button>
+        <button class="btn btn-ghost" id="btnShare">Copy share link</button>
+        <button class="btn btn-ghost btn-danger" id="btnDeleteTrack">Remove track</button>
+      </div>
+      <p class="export-hint">GPX preserves the original import when available. Archive-only tracks export saved geometry. CSV includes data-quality notes. Simplified routes contain up to 50 waypoints.</p>
+    </section>
   </main>
 </div>
 
@@ -222,12 +311,12 @@
 
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
-    <h2>Edit Track</h2>
+    <h2 id="editTitle">Edit Track</h2><p id="editStatus" class="data-quality" role="alert" hidden></p>
     <div class="form-group"><label>Name</label><input type="text" id="editName" /></div>
     <div class="form-group"><label>Date</label><input type="date" id="editDate" /></div>
     <div class="form-group"><label>Tags <span style="font-size:9px;color:#3a6688">(comma-separated)</span></label><input type="text" id="editTags" placeholder="offshore, ICW, delivery…" /></div>
     <div class="form-group"><label>Notes</label><textarea id="editNotes" placeholder="Conditions, fuel stops, observations…"></textarea></div>
-    <div class="modal-actions">
+    <details><summary>Optional reference summary</summary><p class="export-hint">Use known logbook values. Distance overrides the reference distance; duration and maximum speed fill gaps where GPX timing is unavailable. Leave blank to use the original data.</p><div class="form-group"><label for="editDistance">Reference distance (nm)</label><input id="editDistance" type="number" min="0" step="any" /></div><div class="form-group"><label for="editDuration">Known elapsed duration (hours)</label><input id="editDuration" type="number" min="0" step="any" /></div><div class="form-group"><label for="editMax">Known maximum speed (kn)</label><input id="editMax" type="number" min="0" step="any" /></div></details><div class="modal-actions">
       <button class="btn btn-ghost" id="btnCancelEdit">Cancel</button>
       <button class="btn btn-primary" id="btnSaveEdit">Save</button>
     </div>
@@ -272,7 +361,7 @@ let mapLayers = [];
 let editingId = null;
 
 // ── Map ──
-const map = L.map('map', { center: [35, -75], zoom: 5, zoomControl: true });
+const map = window.L ? L.map('map', { center: [35, -75], zoom: 5, zoomControl: true }) : null;
 const MAP_KEY_STORAGE = 'gpx_library_carto_key_v1';
 const mapSettings = document.getElementById('mapSettings');
 const cartoKeyInput = document.getElementById('cartoKey');
@@ -281,19 +370,20 @@ let cartoKey = '';
 let mapKeyMessage = 'Paste your CARTO Basemaps key to load the dark map and labels.';
 try { cartoKey = (localStorage.getItem(MAP_KEY_STORAGE) || '').trim(); }
 catch (e) { mapKeyMessage = 'Browser storage is unavailable. You can still load a key for this visit.'; }
-const cartoBase = L.tileLayer('', {
+const cartoBase = map ? L.tileLayer('', {
   attribution: '© OpenStreetMap contributors © CARTO', subdomains: 'abcd', maxZoom: 19,
   referrerPolicy: 'strict-origin-when-cross-origin'
-});
-L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { opacity: 0.4, maxZoom: 18, zIndex: 2 }).addTo(map);
-const cartoLabels = L.tileLayer('', {
+}) : null;
+if (map) L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { opacity: 0.4, maxZoom: 18, zIndex: 2, attribution: '© OpenSeaMap contributors' }).on('tileerror', () => report('Some OpenSeaMap seamark tiles could not load. Check the connection or zoom level; track data is still available.', true)).addTo(map);
+const cartoLabels = map ? L.tileLayer('', {
   subdomains: 'abcd', maxZoom: 19, opacity: 0.6,
   referrerPolicy: 'strict-origin-when-cross-origin'
-});
+}) : null;
 // Explicit order keeps labels above seamarks after a key change.
-cartoBase.setZIndex(1);
-cartoLabels.setZIndex(3);
+if (cartoBase) cartoBase.setZIndex(1);
+if (cartoLabels) cartoLabels.setZIndex(3);
 function applyMapKey() {
+  if (!map) return;
   [cartoBase, cartoLabels].forEach(layer => {
     if (map.hasLayer(layer)) map.removeLayer(layer);
   });
@@ -302,10 +392,11 @@ function applyMapKey() {
   cartoBase.setUrl('https://{s}.basemaps.cartocdn.com/dark_nolabels' + suffix).addTo(map);
   cartoLabels.setUrl('https://{s}.basemaps.cartocdn.com/dark_only_labels' + suffix).addTo(map);
 }
-[cartoBase, cartoLabels].forEach(layer => layer.on('tileerror', () => {
+[cartoBase, cartoLabels].filter(Boolean).forEach(layer => layer.on('tileerror', () => {
   mapKeyMessage = 'CARTO tiles could not load. Check the Basemaps key, allowed host genius2go.github.io, quota, and connection.';
   mapKeyStatus.textContent = mapKeyMessage;
   document.getElementById('btnMapSettings').textContent = 'Map settings ⚠';
+  report(mapKeyMessage, true);
 }));
 document.getElementById('btnMapSettings').addEventListener('click', () => {
   cartoKeyInput.value = cartoKey;
@@ -347,368 +438,419 @@ document.getElementById('btnClearMapKey').addEventListener('click', () => {
 applyMapKey();
 if (!cartoKey) document.getElementById('btnMapSettings').textContent = 'Map settings · Add key';
 
-// ── Storage ──
-function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tracks.filter(t => !t.builtin))); } catch(e) {} }
+// Track storage is transactional: a failed write never reports success or changes the library.
+let deletedBuiltin = [];
+let storageLocked = false;
+let lastStorageRaw = null;
+let pendingImports = false;
+const selectedLegs = new Set();
+const statsCache = new WeakMap();
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+const finite = v => typeof v === 'number' && Number.isFinite(v);
+const number = (v, digits=1) => finite(v) ? v.toFixed(digits) : 'Not available';
+const hours = h => finite(h) ? `${Math.floor(Math.round(h*60)/60)}h ${String(Math.round(h*60)%60).padStart(2,'0')}m` : 'Not available';
+function uid() { return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function report(message, error=false) {
+  $('libraryStatus').hidden = false;
+  $('libraryStatus').textContent = message;
+  $('libraryStatus').classList.toggle('error', error);
+  $('libraryStatus').setAttribute('role', error ? 'alert' : 'status');
+  if(editingId && $('editStatus')) {$('editStatus').textContent=message;$('editStatus').hidden=false;}
+}
+function toast(msg, err=false) { report(msg, err); }
+function validCoord(c) { return Array.isArray(c) && finite(c[0]) && finite(c[1]) && Math.abs(c[0])<=90 && Math.abs(c[1])<=180; }
+function validateTrack(t) {
+  if (!t || typeof t.id!=='string' || !t.id || typeof t.name!=='string' || !Array.isArray(t.coords) || !t.coords.length || !t.coords.every(validCoord)) throw Error('A track has missing or invalid coordinates, name, or ID.');
+  if (t.date && (typeof t.date!=='string' || !/^\d{4}-\d{2}-\d{2}$/.test(t.date) || !Number.isFinite(Date.parse(t.date)))) throw Error('A track has an invalid date.');
+  for(const key of ['referenceDistance','referenceDuration','referenceMax']) if(t[key]!=null && (!finite(t[key]) || t[key]<0)) throw Error('Reference summary values must be non-negative numbers.');
+  if(t.pointTimes && (!Array.isArray(t.pointTimes)||t.pointTimes.length!==t.coords.length||!t.pointTimes.every(x=>x===null||(finite(x)&&Math.abs(x)<=8640000000000000)))) throw Error('Invalid saved point times.');
+  if(t.segmentStarts && (!Array.isArray(t.segmentStarts)||t.segmentStarts[0]!==0||!t.segmentStarts.every((x,i)=>Number.isInteger(x)&&x>=0&&x<t.coords.length&&(i===0||x>t.segmentStarts[i-1])))) throw Error('Invalid saved segments.');
+  if (t.tags && (!Array.isArray(t.tags) || !t.tags.every(v=>typeof v==='string'))) throw Error('A track has invalid tags.');
+  if (t.notes!=null && typeof t.notes!=='string') throw Error('A track has invalid notes.');
+  if (t.gpxData!=null && typeof t.gpxData!=='string') throw Error('A track has invalid GPX data.');
+  return t;
+}
+function validateTracks(list) {
+  if (!Array.isArray(list)) throw Error('The library is not a track list.');
+  list.forEach(validateTrack);
+  if (new Set(list.map(t=>t.id)).size!==list.length) throw Error('Duplicate track IDs in the library.');
+  return list;
+}
+function libraryPayload(list=tracks, deleted=deletedBuiltin) { return {version:2, tracks:list, deletedBuiltin:deleted}; }
 function load() {
-  // Always start with builtins
-  tracks = BUILTIN_TRACKS.map(t => ({...t}));
-  // Add user tracks from storage
+  tracks = BUILTIN_TRACKS.map(t=>({...t}));
   try {
-    const d = localStorage.getItem(STORAGE_KEY);
-    if (d) {
-      const user = JSON.parse(d);
-      user.forEach(ut => {
-        if (!tracks.find(t => t.id === ut.id)) tracks.push(ut);
-      });
-    }
-  } catch(e) {}
+    lastStorageRaw = localStorage.getItem(STORAGE_KEY);
+    if (!lastStorageRaw) { report('Library ready. Back up your library before clearing browser data.'); return; }
+    const data=JSON.parse(lastStorageRaw);
+    const saved=validateTracks(Array.isArray(data) ? data : data.version===2 ? data.tracks : null);
+    deletedBuiltin = Array.isArray(data.deletedBuiltin) ? data.deletedBuiltin.filter(x=>typeof x==='string') : [];
+    const merged = new Map(tracks.filter(t=>!deletedBuiltin.includes(t.id)).map(t=>[t.id,t]));
+    saved.forEach(t=>merged.set(t.id,t)); tracks=[...merged.values()];
+    report(`Loaded ${tracks.length} tracks from this browser. Back up regularly.`);
+  } catch(e) {
+    storageLocked=true;
+    report('Could not read your saved library: '+e.message+' Existing browser data has been left untouched. Use Back up to preserve recovery data, then Restore a valid backup.',true);
+  }
 }
-
-// ── GPX parsing ──
+function commitLibrary(next, deleted=deletedBuiltin, recovery=false) {
+  if (storageLocked && !recovery) { report('Saving is blocked to protect unreadable library data. Back up recovery data, then restore a valid library.',true); return false; }
+  try {
+    validateTracks(next);
+    const current=localStorage.getItem(STORAGE_KEY);
+    if (current!==lastStorageRaw) throw Error('The library changed in another tab. Reload this page before trying again.');
+    const raw=JSON.stringify(libraryPayload(next,deleted));
+    localStorage.setItem(STORAGE_KEY,raw);
+    lastStorageRaw=raw; tracks=next; deletedBuiltin=deleted; storageLocked=false;
+    return true;
+  } catch(e) {
+    report('NOT SAVED: '+e.message+' Your previous library is unchanged. Keep the original file or your edit open, and back up the library before freeing browser storage.',true);
+    return false;
+  }
+}
+// Preserve segment boundaries; never connect separate tracks, routes, or waypoints.
+function haversine(a,b) {
+  const r=Math.PI/180, lat=(b[0]-a[0])*r, lon=(b[1]-a[1])*r;
+  const h=Math.sin(lat/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(lon/2)**2;
+  return 3440.065*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));
+}
+function children(node, name) { return [...node.children].filter(x=>x.localName===name); }
+function childText(node,name) { return children(node,name)[0]?.textContent.trim() || ''; }
 function parseGPX(text) {
-  const parser = new DOMParser();
-  const xml = parser.parseFromString(text, 'text/xml');
-  const coords = [];
-  xml.querySelectorAll('trkpt, rtept, wpt').forEach(pt => {
-    const lat = parseFloat(pt.getAttribute('lat'));
-    const lon = parseFloat(pt.getAttribute('lon'));
-    if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
-  });
-  const nameEl = xml.querySelector('trk > name, name');
-  const timeEl = xml.querySelector('trkpt time, time');
-  return {
-    coords,
-    gpxName: nameEl ? nameEl.textContent.trim() : null,
-    gpxDate: timeEl ? timeEl.textContent.slice(0,10) : null
-  };
-}
-
-function haversine(a, b) {
-  const R = 3440.065;
-  const dLat = (b[0]-a[0])*Math.PI/180, dLon = (b[1]-a[1])*Math.PI/180;
-  const h = Math.sin(dLat/2)**2 + Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(h), Math.sqrt(1-h));
-}
-function calcDist(coords) {
-  let d = 0;
-  for (let i = 1; i < coords.length; i++) d += haversine(coords[i-1], coords[i]);
-  return d;
-}
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
-
-// ── Import ──
-function importFiles(files) {
-  Array.from(files).forEach(file => {
-    if (!file.name.toLowerCase().endsWith('.gpx')) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const text = e.target.result;
-      const { coords, gpxName, gpxDate } = parseGPX(text);
-      if (!coords.length) { toast('No track points in ' + file.name, true); return; }
-      const name = gpxName || file.name.replace(/\.gpx$/i,'');
-      const track = {
-        id: uid(), name, date: gpxDate || new Date().toISOString().slice(0,10),
-        tags: [], notes: '', gpxData: text, coords,
-        dist_nm: calcDist(coords), builtin: false
-      };
-      tracks.unshift(track);
-      save(); renderList(); selectTrack(track.id);
-      toast('Imported: ' + name);
-    };
-    reader.readAsText(file);
-  });
-}
-
-// ── Render ──
-function getFiltered() {
-  let r = tracks.filter(t => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return t.name.toLowerCase().includes(q) || (t.notes||'').toLowerCase().includes(q) || (t.tags||[]).some(g => g.toLowerCase().includes(q));
-  });
-  r.sort((a,b) => { const c = (a.date||'').localeCompare(b.date||''); return sortAsc ? c : -c; });
-  return r;
-}
-
-function renderList() {
-  const el = document.getElementById('trackList');
-  const filtered = getFiltered();
-  const userCount = tracks.filter(t => !t.builtin).length;
-  document.getElementById('headerCount').textContent = `${tracks.length} tracks`;
-  document.getElementById('listCount').textContent = filtered.length === tracks.length ? `${tracks.length} tracks` : `${filtered.length} of ${tracks.length}`;
-
-  if (!filtered.length) {
-    el.innerHTML = `<div class="empty-state"><div class="es-icon">${tracks.length?'🔍':'🗺'}</div><p>${tracks.length?'No matches.':'Drop a GPX file to get started.'}</p></div>`;
-    return;
-  }
-
-  // Group: user tracks first, then builtins
-  const user = filtered.filter(t => !t.builtin);
-  const builtin = filtered.filter(t => t.builtin);
-
-  let html = '';
-  if (user.length) {
-    html += `<div class="list-divider">My Tracks (${user.length})</div>`;
-    html += user.map(t => trackItemHTML(t)).join('');
-  }
-  if (builtin.length) {
-    html += `<div class="list-divider">Miami → East Falmouth · June 2026 (${builtin.length} legs)</div>`;
-    html += builtin.map(t => trackItemHTML(t)).join('');
-  }
-  el.innerHTML = html;
-
-  el.querySelectorAll('.track-item').forEach(item => {
-    item.addEventListener('click', e => { if (e.target.classList.contains('ti-delete')) return; selectTrack(item.dataset.id); });
-  });
-  el.querySelectorAll('.ti-delete').forEach(btn => {
-    btn.addEventListener('click', e => { e.stopPropagation(); deleteTrack(btn.dataset.id); });
-  });
-}
-
-function trackItemHTML(t) {
-  const dist = t.dist_nm ? t.dist_nm.toFixed(1)+' nm' : '';
-  const speed = t.max_kts ? ` · ${t.max_kts} kts max` : '';
-  const tags = (t.tags||[]).map(g => `<span class="tag${t.builtin?' builtin':''}">${esc(g)}</span>`).join('');
-  return `<div class="track-item${t.id===activeId?' active':''}" data-id="${t.id}">
-    <div class="ti-name">${esc(t.name)}</div>
-    <div class="ti-meta">${t.date||''}${dist?' · '+dist:''}${speed}</div>
-    ${tags?`<div class="ti-tags">${tags}</div>`:''}
-    ${!t.builtin?`<button class="ti-delete" data-id="${t.id}" title="Remove">✕</button>`:''}
-  </div>`;
-}
-
-// ── Select ──
-function selectTrack(id) {
-  activeId = id;
-  const track = tracks.find(t => t.id === id);
-  if (!track) return;
-  renderList();
-
-  mapLayers.forEach(l => map.removeLayer(l)); mapLayers = [];
-  document.getElementById('mapPlaceholder').style.display = 'none';
-
-  const ll = track.coords.map(c => [c[0], c[1]]);
-  const poly = L.polyline(ll, { color:'#4a9eca', weight:2.5, opacity:.9 }).addTo(map);
-  mapLayers.push(poly);
-
-  const mkStart = L.divIcon({ html:'<div style="width:8px;height:8px;background:#4aeca0;border-radius:50%;border:2px solid #0d1b2a"></div>', iconSize:[8,8], iconAnchor:[4,4], className:'' });
-  const mkEnd   = L.divIcon({ html:'<div style="width:8px;height:8px;background:#4a9eca;border-radius:50%;border:2px solid #0d1b2a"></div>', iconSize:[8,8], iconAnchor:[4,4], className:'' });
-  if (ll.length) {
-    mapLayers.push(L.marker(ll[0], {icon:mkStart}).addTo(map));
-    if (ll.length > 1) mapLayers.push(L.marker(ll[ll.length-1], {icon:mkEnd}).addTo(map));
-  }
-  map.fitBounds(poly.getBounds(), { padding:[40,40] });
-
-  // Detail card
-  document.getElementById('tdName').textContent = track.name;
-  document.getElementById('tdStats').innerHTML = `
-    <div><div class="stat-label">Distance</div><div class="stat-value">${track.dist_nm?track.dist_nm.toFixed(1)+' nm':'—'}</div></div>
-    <div><div class="stat-label">Max Speed</div><div class="stat-value">${track.max_kts?track.max_kts+' kts':'—'}</div></div>
-    <div><div class="stat-label">Date</div><div class="stat-value">${track.date||'—'}</div></div>
-    <div><div class="stat-label">Duration</div><div class="stat-value">${track.dur_h?track.dur_h+'h':'—'}</div></div>`;
-  const notesEl = document.getElementById('tdNotes');
-  if (track.notes) { notesEl.textContent = track.notes; notesEl.style.display='block'; } else { notesEl.style.display='none'; }
-  document.getElementById('trackDetail').classList.add('visible');
-}
-
-function deleteTrack(id) {
-  const t = tracks.find(t => t.id === id);
-  if (t && t.builtin) { toast('Built-in tracks cannot be removed', true); return; }
-  tracks = tracks.filter(t => t.id !== id);
-  if (activeId === id) {
-    activeId = null;
-    mapLayers.forEach(l => map.removeLayer(l)); mapLayers = [];
-    document.getElementById('trackDetail').classList.remove('visible');
-    document.getElementById('mapPlaceholder').style.display = 'flex';
-  }
-  save(); renderList(); toast('Track removed');
-}
-
-// ── Share ──
-function shareTrack(id) {
-  const track = tracks.find(t => t.id === id);
-  if (!track) return;
-  try {
-    const payload = JSON.stringify({ name:track.name, date:track.date, tags:track.tags, notes:track.notes, coords:track.coords, dist_nm:track.dist_nm });
-    const encoded = btoa(unescape(encodeURIComponent(payload)));
-    const url = location.origin + location.pathname + '#share=' + encoded;
-    if (url.length > 200000) { toast('Track too large for URL — use GPX download', true); return; }
-    navigator.clipboard.writeText(url).then(() => toast('✓ Share link copied')).catch(() => {
-      const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('✓ Share link copied');
+  const xml=new DOMParser().parseFromString(text,'application/xml');
+  if (xml.getElementsByTagName('parsererror').length || xml.documentElement.localName!=='gpx') throw Error('This file is not valid GPX XML.');
+  const root=xml.documentElement, trks=children(root,'trk'), routes=children(root,'rte');
+  let groups=[], kind='track', source=trks[0];
+  if(trks.length) trks.forEach(t=>children(t,'trkseg').forEach(s=>groups.push(children(s,'trkpt'))));
+  else if(routes.length) { kind='route'; source=routes[0]; groups=routes.map(r=>children(r,'rtept')); }
+  else { kind='waypoints'; source=root; groups=children(root,'wpt').map(p=>[p]); }
+  const coords=[], times=[], segments=[], elevations=[];
+  let invalidTimes=0;
+  groups.filter(g=>g.length).forEach(group=>{
+    segments.push(coords.length);
+    group.forEach(pt=>{
+      const lat=pt.getAttribute('lat'),lon=pt.getAttribute('lon');
+      const c=[Number(lat),Number(lon)];
+      if(lat===null || lon===null || !lat.trim() || !lon.trim() || !validCoord(c)) throw Error('A GPX point has missing or out-of-range coordinates. Import stopped; no points were silently discarded.');
+      coords.push(c);
+      const ts=childText(pt,'time');
+      // A timezone is required so results do not change with the browser timezone.
+      const time=ts && /(?:Z|[+-]\d\d:\d\d)$/i.test(ts) ? Date.parse(ts) : NaN;
+      times.push(Number.isFinite(time)?time:null); if(ts && !Number.isFinite(time)) invalidTimes++;
+      const e=childText(pt,'ele'); elevations.push(e!=='' && Number.isFinite(Number(e))?Number(e):null);
     });
-  } catch(e) { toast('Could not generate share link', true); }
+  });
+  if(!coords.length) throw Error('No track, route, or waypoint coordinates were found.');
+  const meta=children(root,'metadata')[0];
+  const firstTime=times.find(finite);
+  return {coords,times,segments,elevations,kind,invalidTimes,
+    gpxName:childText(source,'name') || (meta && childText(meta,'name')) || null,
+    gpxDate:finite(firstTime)?new Date(firstTime).toISOString().slice(0,10):null,
+    description:childText(source,'desc') || (meta && childText(meta,'desc')) || '',
+    sourceCount:trks.length || routes.length || groups.length,waypointCount:children(root,'wpt').length,otherRoutes:trks.length?routes.length:0};
 }
-
-// ── Download Track (raw GPX) ──
-function downloadTrack(id) {
-  const track = tracks.find(t => t.id === id);
-  if (!track) return;
-  let gpxText = track.gpxData;
-  if (!gpxText) {
-    const pts = track.coords.map(c => `    <trkpt lat="${c[0]}" lon="${c[1]}"></trkpt>`).join('\n');
-    gpxText = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Track Library">\n  <trk><name>${esc(track.name)}</name><trkseg>\n${pts}\n  </trkseg></trk>\n</gpx>`;
+function dataFor(t) {
+  if(statsCache.has(t)) return statsCache.get(t);
+  let d={coords:t.coords,times:t.pointTimes||t.coords.map(()=>null),segments:t.segmentStarts||[0],kind:['route','waypoints'].includes(t.geometryKind)?t.geometryKind:'track',invalidTimes:0};
+  const warnings=[];
+  const referenceSource=t.referenceSource==='Shared reference'?'Shared reference':'Manual reference';
+  if(t.gpxData) {
+    try { d=parseGPX(t.gpxData); }
+    catch(e) { warnings.push('Original GPX could not be parsed: '+e.message+' Showing saved coordinates only.'); }
   }
-  const blob = new Blob([gpxText], {type:'application/gpx+xml'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = track.name.replace(/[^a-z0-9\-_]/gi,'_') + '_track.gpx';
-  a.click(); URL.revokeObjectURL(a.href);
-  toast('↓ Track: ' + track.name);
-}
-
-// ── Douglas-Peucker simplification ──
-function perpendicularDist(pt, lineStart, lineEnd) {
-  const dx = lineEnd[0] - lineStart[0];
-  const dy = lineEnd[1] - lineStart[1];
-  if (dx === 0 && dy === 0) {
-    return Math.sqrt((pt[0]-lineStart[0])**2 + (pt[1]-lineStart[1])**2);
+  const boundaries=new Set(d.segments); let distance=0,timedDistance=0,timedHours=0,movingDistance=0,movingHours=0,stoppedHours=0,maxSpeed=null, badTime=0,gaps=0,spikes=0,pairs=0;
+  for(let i=1;i<d.coords.length;i++) {
+    if(boundaries.has(i)) continue;
+    const nm=haversine(d.coords[i-1],d.coords[i]); distance+=nm;
+    if(!finite(d.times[i-1]) || !finite(d.times[i])) continue;
+    const dt=(d.times[i]-d.times[i-1])/3600000;
+    if(dt<=0) { badTime++; continue; }
+    if(dt>0.5) { gaps++; continue; }
+    const speed=nm/dt;
+    if(speed>100) { spikes++; continue; }
+    pairs++; timedDistance+=nm;timedHours+=dt;maxSpeed=maxSpeed===null?speed:Math.max(maxSpeed,speed);
+    if(speed>=1) { movingDistance+=nm; movingHours+=dt; } else stoppedHours+=dt;
   }
-  const t = ((pt[0]-lineStart[0])*dx + (pt[1]-lineStart[1])*dy) / (dx*dx + dy*dy);
-  const tc = Math.max(0, Math.min(1, t));
-  return Math.sqrt((pt[0]-(lineStart[0]+tc*dx))**2 + (pt[1]-(lineStart[1]+tc*dy))**2);
+  const validTimes=d.times.filter(finite),first=d.times[0],last=d.times[d.times.length-1];
+  const elapsed=finite(first)&&finite(last)&&last>=first?(last-first)/3600000:null;
+  const complete=validTimes.length===d.coords.length && !badTime && d.segments.length===1;
+  const reportedDistance=finite(t.dist_nm)&&t.dist_nm>=0?t.dist_nm:null;
+  const chosenDistance=finite(t.referenceDistance)?t.referenceDistance:t.builtin && reportedDistance!==null ? reportedDistance : d.kind==='waypoints'?null:distance;
+  const duration=elapsed!==null?elapsed:finite(t.referenceDuration)?t.referenceDuration:finite(t.dur_h)&&t.dur_h>=0?t.dur_h:null;
+  const reportedMax=finite(t.referenceMax)?t.referenceMax:finite(t.max_kts)&&t.max_kts>=0?t.max_kts:null;
+  if(!validTimes.length) warnings.push('No point timestamps. Start/finish, calculated speeds, and moving/stopped time cannot be recovered. Reimport the original timed GPX to add them.');
+  else if(validTimes.length!==d.coords.length) warnings.push(`Partial timing: ${validTimes.length} of ${d.coords.length} points have usable timestamps.`);
+  if(d.invalidTimes) warnings.push(`${d.invalidTimes} invalid or timezone-free timestamps were excluded from timing.`);
+  if(badTime) warnings.push(`${badTime} repeated or backwards time intervals were excluded from speed and moving/stopped time.`);
+  if(gaps) warnings.push(`${gaps} recording gaps longer than 30 minutes were excluded from speed and moving/stopped time.`);
+  if(spikes) warnings.push(`${spikes} intervals above 100 kn were excluded from speed and moving/stopped time; their distance is still included. Check for GPS jumps.`);
+  if(d.segments.length>1) warnings.push(`${d.segments.length} separate segments; no distance or speed is invented between them.`);
+  if(d.kind==='route') warnings.push('This is route geometry. Times at route waypoints may be planned rather than recorded travel.');
+  if(d.kind==='waypoints') warnings.push('Standalone waypoints do not define a traveled path. No distance or trip speed is calculated.');
+  if(d.waypointCount && d.kind!=='waypoints') warnings.push(`${d.waypointCount} standalone waypoints are preserved in the original GPX but not included in the traveled path.`);
+  if(d.otherRoutes) warnings.push(`${d.otherRoutes} additional routes are preserved in the original GPX; statistics use recorded tracks only.`);
+  if(t.builtin) warnings.push('June archive: distance, maximum speed, and duration were supplied with the page; original point timing is not bundled. Calculated geometry may differ from the supplied distance.');
+  const result={...d,distance:chosenDistance,geometryDistance:d.kind==='waypoints'?null:distance,reportedDistance,duration,elapsed,
+    durationSource:elapsed!==null?'Point timestamps':finite(t.referenceDuration)?referenceSource:duration!==null?'Supplied summary':'Missing',
+    distanceSource:finite(t.referenceDistance)?referenceSource:t.builtin?'Supplied summary':d.kind==='waypoints'?'No path':'GPX geometry',
+    avg:complete && elapsed>0 && !spikes ? chosenDistance/elapsed : (t.builtin || elapsed===null) && chosenDistance!==null && duration>0?chosenDistance/duration:null,
+    timedAvg:timedHours>0?timedDistance/timedHours:null,
+    maxSpeed,reportedMax,movingHours:pairs?movingHours:null,stoppedHours:pairs?stoppedHours:null,movingAvg:movingHours>0?movingDistance/movingHours:null,
+    validTimeCount:validTimes.length,first:finite(first)?first:null,last:finite(last)?last:null,timedHours,pairs,warnings};
+  statsCache.set(t,result);return result;
 }
-
-function douglasPeucker(coords, epsilon) {
-  if (coords.length <= 2) return coords;
-  let maxDist = 0, maxIdx = 0;
-  for (let i = 1; i < coords.length - 1; i++) {
-    const d = perpendicularDist(coords[i], coords[0], coords[coords.length-1]);
-    if (d > maxDist) { maxDist = d; maxIdx = i; }
+function duplicateOf(parsed, text) {
+  const exact=tracks.find(t=>t.gpxData===text);
+  if(exact)return {track:exact,certain:true};
+  for(const t of tracks) {
+    const s=dataFor(t);
+    if(s.coords.length!==parsed.coords.length || s.segments.length!==parsed.segments.length)continue;
+    if(!s.segments.every((v,i)=>v===parsed.segments[i]) || !s.coords.every((c,i)=>c[0]===parsed.coords[i][0]&&c[1]===parsed.coords[i][1]))continue;
+    const identicalTimes=s.times.length===parsed.times.length && s.times.every((v,i)=>v===parsed.times[i]);
+    const hasTimes=parsed.times.some(finite);
+    // Same path on a different dated trip is valid; never deduplicate by geometry alone.
+    if(identicalTimes && hasTimes)return {track:t,certain:true};
+    if(!hasTimes || !s.times.some(finite))return {track:t,certain:false};
   }
-  if (maxDist > epsilon) {
-    const left  = douglasPeucker(coords.slice(0, maxIdx+1), epsilon);
-    const right = douglasPeucker(coords.slice(maxIdx), epsilon);
-    return [...left.slice(0,-1), ...right];
-  }
-  return [coords[0], coords[coords.length-1]];
+  return null;
 }
-
-function simplifyToTarget(coords, target) {
-  // Binary search for the epsilon that gets us close to target waypoints
-  let lo = 0, hi = 1, best = coords;
-  for (let i = 0; i < 20; i++) {
-    const mid = (lo + hi) / 2;
-    const result = douglasPeucker(coords, mid);
-    if (result.length > target) lo = mid;
-    else { hi = mid; best = result; }
-    if (Math.abs(result.length - target) <= 2) { best = result; break; }
-  }
-  // Always keep at least start and end
-  return best.length >= 2 ? best : [coords[0], coords[coords.length-1]];
-}
-
-// ── Download Route (simplified GPX route for Garmin/sharing) ──
-function downloadRoute(id) {
-  const track = tracks.find(t => t.id === id);
-  if (!track) return;
-
-  const TARGET_WPTS = 50;
-  const simplified = simplifyToTarget(track.coords, TARGET_WPTS);
-
-  const wpts = simplified.map((c, i) => {
-    const num = String(i+1).padStart(3,'0');
-    return `    <rtept lat="${c[0].toFixed(6)}" lon="${c[1].toFixed(6)}">\n      <name>WPT${num}</name>\n    </rtept>`;
-  }).join('\n');
-
-  const gpxText = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Track Library"
-  xmlns="http://www.topografix.com/GPX/1/1"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
-  <metadata>
-    <name>${esc(track.name)}</name>
-    <desc>Route exported from Track Library · ${simplified.length} waypoints · Original: ${track.coords.length} trackpoints</desc>
-    <time>${track.date ? track.date+'T00:00:00Z' : new Date().toISOString()}</time>
-  </metadata>
-  <rte>
-    <name>${esc(track.name)}</name>
-    <desc>${simplified.length} waypoints · Douglas-Peucker simplified from ${track.coords.length} pts</desc>
-${wpts}
-  </rte>
-</gpx>`;
-
-  const blob = new Blob([gpxText], {type:'application/gpx+xml'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = track.name.replace(/[^a-z0-9\-_]/gi,'_') + '_route.gpx';
-  a.click(); URL.revokeObjectURL(a.href);
-  toast(`↓ Route: ${track.name} (${simplified.length} waypoints)`);
-}
-
-// ── Edit ──
-function openEdit(id) {
-  editingId = id;
-  const t = tracks.find(t => t.id === id);
-  if (!t) return;
-  document.getElementById('editName').value = t.name;
-  document.getElementById('editDate').value = t.date||'';
-  document.getElementById('editTags').value = (t.tags||[]).join(', ');
-  document.getElementById('editNotes').value = t.notes||'';
-  document.getElementById('modalBackdrop').classList.add('open');
-}
-function closeEdit() { document.getElementById('modalBackdrop').classList.remove('open'); editingId = null; }
-function saveEdit() {
-  const t = tracks.find(t => t.id === editingId); if (!t) return;
-  t.name = document.getElementById('editName').value.trim() || t.name;
-  t.date = document.getElementById('editDate').value;
-  t.tags = document.getElementById('editTags').value.split(',').map(s=>s.trim()).filter(Boolean);
-  t.notes = document.getElementById('editNotes').value.trim();
-  save(); closeEdit(); renderList();
-  if (activeId === editingId) selectTrack(editingId);
-  toast('Saved');
-}
-
-// ── Handle share URL ──
-function handleShareUrl() {
-  if (!location.hash.startsWith('#share=')) return;
+async function importFiles(files) {
+  if(pendingImports) { report('An import is already running. Wait for it to finish.',true);return; }
+  pendingImports=true;
+  let added=0,duplicates=0,failures=[];
   try {
-    const payload = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(7)))));
-    if (tracks.find(t => t.name === payload.name && t.date === payload.date)) return;
-    const track = { id:uid(), name:payload.name, date:payload.date, tags:payload.tags||[], notes:payload.notes||'', coords:payload.coords, dist_nm:payload.dist_nm, builtin:false };
-    tracks.unshift(track); save(); renderList(); selectTrack(track.id);
-    toast('✓ Shared track added to library');
-    history.replaceState(null, '', location.pathname);
-  } catch(e) { toast('Could not load shared track', true); }
+    for(const file of Array.from(files)) {
+      try {
+        if(!/\.gpx$/i.test(file.name)) throw Error('Choose a .gpx file.');
+        const text=await file.text();const parsed=parseGPX(text);
+        const duplicate=duplicateOf(parsed,text);
+        if(duplicate?.certain) { duplicates++;continue; }
+        if(duplicate && !confirm(`This path matches “${duplicate.track.name}”, but timestamps are missing, so it may be the same track. Add it as a separate trip anyway? Choose Cancel to skip it.`)) {duplicates++;continue;}
+        const name=parsed.gpxName || file.name.replace(/\.gpx$/i,'');
+        const track={id:uid(),name,date:parsed.gpxDate||'',tags:[],notes:parsed.description,gpxData:text,coords:parsed.coords,builtin:false,importedAt:new Date().toISOString(),sourceFile:file.name};
+        if(!commitLibrary([...tracks,track])) { failures.push(file.name+': '+$('libraryStatus').textContent);break; }
+        added++;selectTrack(track.id,false);
+      } catch(e) { failures.push(file.name+': '+e.message); }
+    }
+    if(failures.length) report(`Imported and saved ${added}; skipped ${duplicates} duplicate tracks. Problems: ${failures.join(' | ')}`,true);
+    else report(`Imported and saved ${added} tracks. Skipped ${duplicates} duplicate tracks.`);
+    renderList();
+  } finally { pendingImports=false; }
 }
-
-// ── Toast ──
-function toast(msg, err=false) {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.style.color = err ? '#e07070' : ''; el.style.borderColor = err ? '#5a2a2a' : '';
-  el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 3000);
+function getFiltered() {
+  const q=searchQuery.toLowerCase();
+  return tracks.filter(t=>!q || [t.name,t.notes,...t.tags||[]].join(' ').toLowerCase().includes(q)).sort((a,b)=>{
+    if(!a.date) return b.date?1:a.name.localeCompare(b.name);
+    if(!b.date) return -1;
+    const c=a.date.localeCompare(b.date)||a.name.localeCompare(b.name);return sortAsc?c:-c;
+  });
 }
-function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-// ── Init ──
+function renderList() {
+  const filtered=getFiltered();
+  $('headerCount').textContent=`${tracks.length} tracks`;
+  $('listCount').textContent=filtered.length===tracks.length?`${tracks.length} tracks`:`${filtered.length} of ${tracks.length}`;
+  $('trackList').innerHTML=filtered.length?filtered.map(t=>{
+    const s=dataFor(t);return `<div class="track-item${t.id===activeId?' active':''}" data-id="${esc(t.id)}">
+      <label class="leg-check"><input type="checkbox" data-leg="${esc(t.id)}" ${selectedLegs.has(t.id)?'checked':''} aria-label="Include ${esc(t.name)} in leg totals" /></label>
+      <button class="track-select" data-select="${esc(t.id)}"><span class="ti-name">${esc(t.name)}</span><span class="ti-meta">${esc(t.date||'Date not recorded')} · ${finite(s.distance)?number(s.distance)+' nm':'Distance unavailable'}${finite(s.duration)?' · '+hours(s.duration):''}</span></button>
+      ${t.tags?.length?`<div class="ti-tags">${t.tags.map(g=>`<span class="tag">${esc(g)}</span>`).join('')}</div>`:''}</div>`;
+  }).join(''):'<p class="empty-state">No matching tracks.</p>';
+  $('trackList').querySelectorAll('[data-select]').forEach(b=>b.addEventListener('click',()=>selectTrack(b.dataset.select)));
+  $('trackList').querySelectorAll('[data-leg]').forEach(b=>b.addEventListener('change',()=>{b.checked?selectedLegs.add(b.dataset.leg):selectedLegs.delete(b.dataset.leg);renderTotals();}));
+  renderTotals();
+}
+function metric(label,value,help='') { return `<div class="metric"><dt>${esc(label)}</dt><dd>${esc(value)}</dd>${help?`<small>${esc(help)}</small>`:''}</div>`; }
+function stamp(ms) { return finite(ms)?new Date(ms).toISOString().replace('T',' ').replace('.000Z',' UTC'):'Not available'; }
+function renderDetail(t) {
+  const s=dataFor(t);$('tdName').textContent=t.name;
+  $('btnDownloadTrack').textContent=t.gpxData?'Download original GPX':'Download GPX geometry';
+  $('tdStats').innerHTML=metric('Distance',finite(s.distance)?number(s.distance)+' nm':'Not available',s.distanceSource)+metric('Elapsed time',hours(s.duration),s.durationSource)+metric('Average speed',finite(s.avg)?number(s.avg)+' kn':'Not available','Reference distance ÷ elapsed time')+metric('Maximum speed',finite(s.maxSpeed)?number(s.maxSpeed)+' kn':finite(s.reportedMax)?number(s.reportedMax)+' kn':'Not available',finite(s.maxSpeed)?'Calculated between GPS points':finite(t.referenceMax)?(t.referenceSource==='Shared reference'?'Shared reference':'Manual reference'):finite(s.reportedMax)?'Supplied summary':'Needs usable timestamps');
+  $('tdMore').innerHTML=`<dl class="td-stats">`+
+    metric('Moving time ≥1 kn',hours(s.movingHours),'Estimate; intervals ≤30 min, ≤100 kn')+metric('Stopped / slow <1 kn',hours(s.stoppedHours),'Estimate; excludes gaps and invalid intervals')+
+    metric('Moving average',finite(s.movingAvg)?number(s.movingAvg)+' kn':'Not available','Moving distance ÷ moving time')+metric('Timed-interval average',finite(s.timedAvg)?number(s.timedAvg)+' kn':'Not available','Usable timed intervals only')+
+    metric('Start (UTC)',stamp(s.first))+metric('Finish (UTC)',stamp(s.last))+
+    metric('Distance conversions',finite(s.distance)?`${number(s.distance*1.852)} km · ${number(s.distance*1.150779448)} mi`:'Not available')+
+    metric('Geometry distance',finite(s.geometryDistance)?number(s.geometryDistance)+' nm':'Not available','Sum within segments; no gaps bridged')+
+    metric('GPS points',s.coords.length.toLocaleString())+metric('Usable point times',`${s.validTimeCount} / ${s.coords.length}`)+
+    metric('Segments',s.segments.length)+metric('Usable timed coverage',hours(s.pairs?s.timedHours:null))+metric('Known maximum',finite(s.reportedMax)?number(s.reportedMax)+' kn':'Not available',finite(t.referenceMax)?(t.referenceSource==='Shared reference'?'Shared reference':'Manual reference'):'Supplied summary')+
+    metric('Start position',`${s.coords[0][0].toFixed(5)}, ${s.coords[0][1].toFixed(5)}`)+metric('End position',`${s.coords.at(-1)[0].toFixed(5)}, ${s.coords.at(-1)[1].toFixed(5)}`)+
+    metric('Source file',t.sourceFile||'Original filename unavailable')+`</dl>`;
+  $('dataQuality').innerHTML=s.warnings.length?s.warnings.map(w=>`<p>${esc(w)}</p>`).join(''):'All point timestamps are present. Speeds are averages between recorded GPS points, not instrument peaks.';
+  $('tdNotes').textContent=t.notes||'';$('tdNotes').hidden=!t.notes;
+  $('trackDetail').classList.add('visible');
+}
+function selectTrack(id,fit=true) {
+  const t=tracks.find(t=>t.id===id);if(!t)return;
+  activeId=id;renderList();renderDetail(t);
+  if(!map) return;
+  mapLayers.forEach(l=>map.removeLayer(l));mapLayers=[];
+  const s=dataFor(t),groups=s.segments.map((start,i)=>s.coords.slice(start,s.segments[i+1]??s.coords.length));
+  groups.forEach(g=>mapLayers.push(L.polyline(g,{color:'#62bee1',weight:3,opacity:.95}).addTo(map)));
+  const start=s.coords[0],end=s.coords.at(-1);
+  mapLayers.push(L.circleMarker(start,{radius:5,color:'#0d1b2a',weight:2,fillColor:'#4aeca0',fillOpacity:1}).bindTooltip('Start').addTo(map));
+  if(s.coords.length>1)mapLayers.push(L.circleMarker(end,{radius:5,color:'#0d1b2a',weight:2,fillColor:'#62bee1',fillOpacity:1}).bindTooltip('Finish').addTo(map));
+  $('mapPlaceholder').style.display='none';
+  if(fit)map.fitBounds(L.latLngBounds(s.coords),{padding:[30,30],maxZoom:14});
+}
+function renderTotals() {
+  const legs=tracks.filter(t=>selectedLegs.has(t.id)),stats=legs.map(dataFor);
+  const dist=stats.filter(s=>finite(s.distance)),timed=stats.filter(s=>finite(s.duration));
+  const total=dist.reduce((a,s)=>a+s.distance,0),duration=timed.reduce((a,s)=>a+s.duration,0);
+  $('legSummary').textContent=legs.length?`${legs.length} selected legs · ${dist.length?number(total)+' nm':'Distance unavailable'}${dist.length!==legs.length?` (${dist.length}/${legs.length} with distance)`:''} · ${timed.length?hours(duration)+' recorded':'Time unavailable'} (${timed.length}/${legs.length} with time)`:'Select track checkboxes to total multiple legs.';
+  const speed=Number($('planSpeed').value),burn=Number($('planBurn').value);
+  if(($('planSpeed').value!=='' && (!(speed>0)||!Number.isFinite(speed))) || ($('planBurn').value!==''&&(!(burn>=0)||!Number.isFinite(burn)))) {$('planResult').textContent='Enter a positive cruising speed and a non-negative fuel burn.';return;}
+  $('planResult').textContent=legs.length && dist.length===legs.length && speed>0 && Number.isFinite(speed)?`At ${speed} kn: ${hours(total/speed)} underway${burn>0&&Number.isFinite(burn)?` · ${number(total/speed*burn)} US gal at ${burn} gal/h`:''}. Estimate excludes stops, weather, currents and reserve.`:legs.length&&dist.length!==legs.length?'Some selected legs have no distance; a complete estimate cannot be calculated.':'Select legs and enter a cruising speed for a planning estimate.';
+}
+function openEdit(id) {
+  const t=tracks.find(t=>t.id===id);if(!t)return;editingId=id;
+  $('editStatus').hidden=true;$('editStatus').textContent='';
+  $('editName').value=t.name;$('editDate').value=t.date||'';$('editTags').value=(t.tags||[]).join(', ');$('editNotes').value=t.notes||'';
+  $('modalBackdrop').classList.add('open');$('editDistance').value=t.referenceDistance??'';$('editDuration').value=t.referenceDuration??'';$('editMax').value=t.referenceMax??'';
+  $('editName').focus();
+}
+function closeEdit() { $('modalBackdrop').classList.remove('open');editingId=null; }
+function saveEdit() {
+  const id=editingId,t=tracks.find(t=>t.id===id);if(!t)return;
+  const name=$('editName').value.trim();if(!name){report('Enter a track name before saving.',true);return;}
+  const ref={};
+  for(const [id,key] of [['editDistance','referenceDistance'],['editDuration','referenceDuration'],['editMax','referenceMax']]) {const value=$(id).value.trim();ref[key]=value===''?null:Number(value);if(ref[key]!==null&&(!finite(ref[key])||ref[key]<0)) {report('Enter valid non-negative reference summary numbers.',true);return;}}
+  const changedReferences=Object.keys(ref).some(k=>ref[k]!== (t[k]??null));
+  const updated={...t,...ref,referenceSource:changedReferences?'Manual reference':t.referenceSource,name,date:$('editDate').value,tags:[...new Set($('editTags').value.split(',').map(s=>s.trim()).filter(Boolean))],notes:$('editNotes').value.trim()};
+  if(!commitLibrary(tracks.map(x=>x.id===id?updated:x)))return;
+  closeEdit();renderList();if(activeId===id)selectTrack(id,false);report('Track changes saved in this browser.');
+}
+function deleteTrack(id) {
+  const t=tracks.find(t=>t.id===id);if(!t)return;
+  if(!confirm(`Remove “${t.name}” from this library? Download a backup first if you may need it again.`))return;
+  const deleted=BUILTIN_TRACKS.some(x=>x.id===id)?[...new Set([...deletedBuiltin,id])]:deletedBuiltin;
+  if(!commitLibrary(tracks.filter(x=>x.id!==id),deleted))return;
+  selectedLegs.delete(id);
+  if(activeId===id){activeId=null;mapLayers.forEach(l=>map.removeLayer(l));mapLayers=[];$('trackDetail').classList.remove('visible');$('mapPlaceholder').style.display='flex';}
+  renderList();report('Track removed and library saved.');
+}
+function downloadBlob(content,type,name) {
+  const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  report('Download requested: '+name+'. Check your browser’s downloads.');
+}
+function filename(t) { return t.name.replace(/[^a-z0-9\-_]/gi,'_').slice(0,120)||'track'; }
+function backupLibrary() {
+  const data={...libraryPayload(),exportedAt:new Date().toISOString()};
+  if(storageLocked)data.recoveryRaw=lastStorageRaw;
+  downloadBlob(JSON.stringify(data,null,2),'application/json','track-library-backup-'+new Date().toISOString().slice(0,10)+'.json');
+}
+async function restoreLibrary(file) {
+  try {
+    const data=JSON.parse(await file.text());if(data.version!==2)throw Error('Choose a version 2 Track Library backup.');
+    validateTracks(data.tracks);
+    if(!Array.isArray(data.deletedBuiltin) || !data.deletedBuiltin.every(x=>typeof x==='string'))throw Error('Invalid deleted-track record.');
+    if(!confirm(`Replace this browser’s library with ${data.tracks.length} tracks from the backup? Back up the current library first if needed.`))return;
+    if(!commitLibrary(data.tracks,data.deletedBuiltin,true))return;
+    selectedLegs.clear();activeId=null;renderList();
+    if(tracks.length)selectTrack(getFiltered()[0].id);else{$('trackDetail').classList.remove('visible');mapLayers.forEach(l=>map.removeLayer(l));mapLayers=[];}
+    report(`Restored and saved ${tracks.length} tracks. Your map key was not changed.`);
+  } catch(e){report('Restore failed; your current library was not replaced. '+e.message,true);}
+}
+function csvCell(v) {
+  let text=v==null?'':String(v);if(typeof v==='string' && /^[=+\-@\t\r]/.test(text))text="'"+text;
+  return '"'+text.replace(/"/g,'""')+'"';
+}
+function csvDownload(rows,name){downloadBlob('\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8',name);}
+function exportSummary() {
+  const source=selectedLegs.size?tracks.filter(t=>selectedLegs.has(t.id)):getFiltered();
+  if(!source.length){report('No tracks to export.',true);return;}
+  const rows=[['Track','Date','Distance_nm','Distance_source','Geometry_nm','Elapsed_hours','Elapsed_source','Average_kn','Max_calculated_kn','Max_reference_kn','Max_reference_source','Moving_hours_est','Slow_hours_est','Moving_avg_kn','Timed_avg_kn','Start_UTC','Finish_UTC','Points','Timed_points','Segments','Tags','Notes','Data_quality']];
+  source.forEach(t=>{const s=dataFor(t);rows.push([t.name,t.date,s.distance,s.distanceSource,s.geometryDistance,s.duration,s.durationSource,s.avg,s.maxSpeed,s.reportedMax,finite(t.referenceMax)?(t.referenceSource==='Shared reference'?'Shared reference':'Manual reference'):s.reportedMax!==null?'Supplied summary':'Missing',s.movingHours,s.stoppedHours,s.movingAvg,s.timedAvg,finite(s.first)?new Date(s.first).toISOString():'',finite(s.last)?new Date(s.last).toISOString():'',s.coords.length,s.validTimeCount,s.segments.length,(t.tags||[]).join('; '),t.notes,s.warnings.join(' | ')]);});
+  csvDownload(rows,'track-library-summary.csv');
+}
+function exportPoints(id) {
+  const t=tracks.find(t=>t.id===id);if(!t)return;const s=dataFor(t),rows=[['Segment','Point','Latitude','Longitude','Time_UTC','Elevation_m','Distance_from_previous_nm','Calculated_speed_kn','Interval_note']];
+  let seg=0;const boundaries=new Set(s.segments);
+  s.coords.forEach((c,i)=>{
+    if(boundaries.has(i))seg++;
+    const linked=i>0&&!boundaries.has(i),nm=linked?haversine(s.coords[i-1],c):null,dt=linked&&finite(s.times[i])&&finite(s.times[i-1])?(s.times[i]-s.times[i-1])/3600000:null;
+    const speed=dt>0?nm/dt:null;
+    rows.push([seg,i+1,c[0],c[1],finite(s.times[i])?new Date(s.times[i]).toISOString():'',s.elevations?.[i],nm,speed,!linked?'Segment start':dt===null?'Missing timing':dt<=0?'Non-increasing time':dt>0.5?'Gap >30 min':speed>100?'Speed >100 kn; check GPS jump':'']);
+  });csvDownload(rows,filename(t)+'_points.csv');
+}
+function generatedTrack(t) {
+  const s=dataFor(t);
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Track Library" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${esc(t.name)}</name>${s.segments.map((start,i)=>'<trkseg>'+s.coords.slice(start,s.segments[i+1]??s.coords.length).map((c,j)=>`<trkpt lat="${c[0]}" lon="${c[1]}">${finite(s.times[start+j])?'<time>'+new Date(s.times[start+j]).toISOString()+'</time>':''}</trkpt>`).join('')+'</trkseg>').join('')}</trk></gpx>`;
+}
+function downloadTrack(id) { const t=tracks.find(t=>t.id===id);if(t)downloadBlob(t.gpxData||generatedTrack(t),'application/gpx+xml',filename(t)+'_track.gpx'); }
+function perpendicularDist(p,a,b) { const dx=b[0]-a[0],dy=b[1]-a[1],len=dx*dx+dy*dy,q=len?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/len)):0;return Math.hypot(p[0]-a[0]-q*dx,p[1]-a[1]-q*dy); }
+function simplifyToTarget(coords,target) {
+  if(coords.length<=target)return coords;
+  // Iterative splitting avoids recursive stack overflows and imposes a strict point cap.
+  const kept=new Set([0,coords.length-1]);let spans=[[0,coords.length-1]];
+  while(kept.size<target && spans.length){
+    let best=-1,bestIndex=-1,bestPoint=-1;
+    spans.forEach(([a,b],i)=>{for(let j=a+1;j<b;j++){const d=perpendicularDist(coords[j],coords[a],coords[b]);if(d>best){best=d;bestIndex=i;bestPoint=j;}}});
+    if(bestPoint<0)break;const [a,b]=spans.splice(bestIndex,1)[0];kept.add(bestPoint);spans.push([a,bestPoint],[bestPoint,b]);
+  }
+  return [...kept].sort((a,b)=>a-b).map(i=>coords[i]);
+}
+function downloadRoute(id) {
+  const t=tracks.find(t=>t.id===id);if(!t)return;const s=dataFor(t);
+  if(s.segments.length!==1 || s.coords.length<2 || s.kind==='waypoints'){report('Route export needs one continuous path with at least two points. Export the original GPX to preserve separate segments.',true);return;}
+  if(!confirm('Create a simplified route with up to 50 waypoints? Simplification can cut corners. Review every leg on your chart before navigation.'))return;
+  const points=simplifyToTarget(s.coords,50);
+  const xml=`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Track Library" xmlns="http://www.topografix.com/GPX/1/1"><rte><name>${esc(t.name)}</name><desc>Simplified reference route; ${points.length} waypoints. Review on a chart.</desc>${points.map((c,i)=>`<rtept lat="${c[0]}" lon="${c[1]}"><name>WPT${String(i+1).padStart(3,'0')}</name></rtept>`).join('')}</rte></gpx>`;
+  downloadBlob(xml,'application/gpx+xml',filename(t)+'_route.gpx');
+}
+async function shareTrack(id) {
+  const t=tracks.find(t=>t.id===id);if(!t)return;
+  try {
+    const s=dataFor(t);
+    const payload={name:t.name,date:t.date,tags:t.tags||[],notes:t.notes||'',coords:s.coords,pointTimes:s.times,segmentStarts:s.segments,geometryKind:s.kind,referenceDistance:s.distance,referenceDuration:s.duration,referenceMax:s.maxSpeed??s.reportedMax,referenceSource:'Shared reference'};
+    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    const url=location.origin+location.pathname+'#share='+encoded;
+    if(url.length>8000)throw Error('This track is too large for a dependable share link. Download its GPX instead.');
+    if(!navigator.clipboard?.writeText)throw Error('Clipboard access is unavailable. Download the GPX instead.');
+    await navigator.clipboard.writeText(url);report('Share link copied. It contains geometry, available point times, reference summaries, and notes. The map key is not included.');
+  }catch(e){report('Share failed: '+e.message,true);}
+}
+function handleShareUrl() {
+  if(!location.hash.startsWith('#share='))return false;
+  try {
+    const p=JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(7)))));
+    const t={id:uid(),name:p.name,date:p.date||'',tags:p.tags||[],notes:p.notes||'',coords:p.coords,pointTimes:p.pointTimes,segmentStarts:p.segmentStarts,geometryKind:p.geometryKind,referenceDistance:p.referenceDistance,referenceDuration:p.referenceDuration,referenceMax:p.referenceMax,referenceSource:'Shared reference',builtin:false};validateTrack(t);
+    const existing=tracks.find(x=>x.name===t.name&&x.date===t.date);
+    if(existing){selectTrack(existing.id);report('A track with this name and date already exists; the shared track was not added.');return true;}
+    if(!confirm(`Add shared track “${t.name}” (${t.coords.length} points) to this browser’s library?`))return false;
+    if(!commitLibrary([...tracks,t]))return false;
+    selectTrack(t.id);history.replaceState(null,'',location.pathname+location.search);report(t.pointTimes?.some(finite)?'Shared track saved with available timing.':'Shared track saved. This link contains no recorded point timing.');return true;
+  }catch(e){report('Shared track could not be loaded: '+e.message,true);return false;}
+}
 function init() {
-  load(); renderList(); handleShareUrl();
-
-  const dz = document.getElementById('dropZone');
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); importFiles(e.dataTransfer.files); });
-  document.getElementById('fileInput').addEventListener('change', e => { importFiles(e.target.files); e.target.value=''; });
-  document.body.addEventListener('dragover', e => e.preventDefault());
-  document.body.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.files.length) importFiles(e.dataTransfer.files); });
-
-  document.getElementById('searchInput').addEventListener('input', e => { searchQuery = e.target.value; renderList(); });
-  document.getElementById('sortBtn').addEventListener('click', () => { sortAsc = !sortAsc; document.getElementById('sortBtn').textContent = sortAsc?'Date ↑':'Date ↓'; renderList(); });
-
-  document.getElementById('btnShare').addEventListener('click', () => activeId && shareTrack(activeId));
-  document.getElementById('btnDownloadTrack').addEventListener('click', () => activeId && downloadTrack(activeId));
-  document.getElementById('btnDownloadRoute').addEventListener('click', () => activeId && downloadRoute(activeId));
-  document.getElementById('btnEdit').addEventListener('click', () => activeId && openEdit(activeId));
-
-  document.getElementById('btnCancelEdit').addEventListener('click', closeEdit);
-  document.getElementById('btnSaveEdit').addEventListener('click', saveEdit);
-  document.getElementById('modalBackdrop').addEventListener('click', e => { if(e.target===document.getElementById('modalBackdrop')) closeEdit(); });
-  document.addEventListener('keydown', e => { if(e.key==='Escape') closeEdit(); });
-
-  // Select first leg by default
-  if (tracks.length) selectTrack(tracks[tracks.length-1].id);
+  load();renderList();const shared=handleShareUrl();if(!shared&&tracks.length)selectTrack(getFiltered()[0].id);
+  const dz=$('dropZone');dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  // A single body handler prevents the same dropped file from being imported twice.
+  document.body.addEventListener('dragover',e=>e.preventDefault());
+  document.body.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files.length)importFiles(e.dataTransfer.files);});
+  $('fileInput').addEventListener('change',e=>{importFiles(e.target.files);e.target.value='';});
+  $('searchInput').addEventListener('input',e=>{searchQuery=e.target.value;renderList();});
+  $('sortBtn').addEventListener('click',()=>{sortAsc=!sortAsc;$('sortBtn').textContent=sortAsc?'Date ↑':'Date ↓';renderList();});
+  $('btnEdit').addEventListener('click',()=>activeId&&openEdit(activeId));$('btnSaveEdit').addEventListener('click',saveEdit);$('btnCancelEdit').addEventListener('click',closeEdit);
+  $('modalBackdrop').addEventListener('click',e=>{if(e.target===$('modalBackdrop'))closeEdit();});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEdit();});
+  $('btnDeleteTrack').addEventListener('click',()=>activeId&&deleteTrack(activeId));
+  $('btnDownloadTrack').addEventListener('click',()=>activeId&&downloadTrack(activeId));$('btnDownloadRoute').addEventListener('click',()=>activeId&&downloadRoute(activeId));
+  $('btnShare').addEventListener('click',()=>activeId&&shareTrack(activeId));$('btnPoints').addEventListener('click',()=>activeId&&exportPoints(activeId));
+  $('btnBackup').addEventListener('click',backupLibrary);$('btnCSV').addEventListener('click',exportSummary);
+  $('restoreInput').addEventListener('change',e=>{if(e.target.files[0])restoreLibrary(e.target.files[0]);e.target.value='';});
+  $('planSpeed').addEventListener('input',renderTotals);$('planBurn').addEventListener('input',renderTotals);
+  $('legTools').addEventListener('toggle',()=>{const open=$('legTools').open;$('legTools').closest('.sidebar').classList.toggle('comparing',open);if(!open)selectedLegs.clear();renderList();});
+  $('btnClearLegs').addEventListener('click',()=>{selectedLegs.clear();renderList();});
+  $('btnSelectVisible').addEventListener('click',()=>{getFiltered().forEach(t=>selectedLegs.add(t.id));renderList();});
+  window.addEventListener('storage',e=>{if(e.key===STORAGE_KEY)report('The library changed in another tab. Reload before editing or importing; this tab will not overwrite those changes.',true);});
+  window.addEventListener('unhandledrejection',()=>report('An operation did not complete. Check the last action and keep the original file; no success has been confirmed.',true));
+  window.addEventListener('error',()=>report('An unexpected error occurred. Back up your library and reload before continuing.',true));
+  if(map && window.ResizeObserver) new ResizeObserver(()=>map.invalidateSize()).observe($('map'));
+  if(!map) report('Map library could not load. Your track reference and saved data remain available. Check the connection and reload to restore the map.',true);
 }
-
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded',init,{once:true});
 </script>
 </body>
 </html>
