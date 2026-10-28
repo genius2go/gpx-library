@@ -524,15 +524,65 @@ function refreshAfterSync() {
   else if(tracks.length)selectTrack(getFiltered()[0]?.id || tracks[0].id,false);
   else {activeId=null;mapLayers.forEach(l=>map?.removeLayer(l));mapLayers=[];$('trackDetail').classList.remove('visible');$('mapPlaceholder').style.display='flex';}
 }
-function persistSync(doc,base,pending) {
+
+let libraryDB;
+async function openLibraryDB() {
+  if(libraryDB)return libraryDB;
+  libraryDB=await new Promise((resolve,reject)=>{
+    const request=indexedDB.open('gpx-library',1);
+    request.onupgradeneeded=()=>request.result.createObjectStore('library');
+    request.onsuccess=()=>{const db=request.result;db.onversionchange=()=>{db.close();libraryDB=null;};resolve(db);};
+    request.onerror=()=>reject(request.error);
+    request.onblocked=()=>reject(Error('Close other Track Library tabs, then reload.'));
+  });
+  return libraryDB;
+}
+async function readLibraryRaw() {
+  const db=await openLibraryDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('library','readonly'),request=tx.objectStore('library').get('snapshot');
+    tx.oncomplete=()=>resolve(request.result??null);
+    tx.onabort=()=>reject(tx.error||Error('Could not read the device cache.'));
+  });
+}
+async function writeLibraryRaw(raw,expected) {
+  const db=await openLibraryDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('library','readwrite'),store=tx.objectStore('library');
+    let conflict=false;
+    const request=store.get('snapshot');
+    request.onsuccess=()=>{
+      if((request.result??null)!==expected){conflict=true;tx.abort();return;}
+      store.put(raw,'snapshot');
+    };
+    tx.oncomplete=()=>resolve();
+    tx.onabort=()=>reject(conflict?Error('Another tab changed this library. Reload before saving.'):tx.error||Error('Could not save the device cache.'));
+  });
+}
+async function migrateLibraryStorage() {
+  let raw=await readLibraryRaw();
+  if(raw===null) {
+    const legacy=localStorage.getItem(STORAGE_KEY);
+    if(legacy!==null) {
+      // Commit and verify the exact bytes before releasing the old small storage area.
+      await writeLibraryRaw(legacy,null);
+      raw=await readLibraryRaw();
+      if(raw!==legacy)throw Error('Storage migration could not be verified.');
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+  return raw;
+}
+
+async function persistSync(doc,base,pending) {
   validateTracks(doc.tracks);
-  if(localStorage.getItem(STORAGE_KEY)!==lastStorageRaw)throw Error('Another tab changed this library. Reload before syncing.');
+
   const raw=JSON.stringify({...doc,_sync:{base,pending}});
-  localStorage.setItem(STORAGE_KEY,raw);
+  await writeLibraryRaw(raw,lastStorageRaw);
   lastStorageRaw=raw;tracks=doc.tracks;deletedBuiltin=doc.deletedBuiltin||[];deletedTrackIds=doc.deletedTrackIds||[];syncBase=base;syncPending=pending;
 }
 async function syncLibrary() {
-  if(syncBusy || authTesting || storageLocked)return;
+  if(syncBusy || authTesting || storageLocked || localSaveBusy)return;
   // Avoid replacing a form the user is currently editing.
   if(editingId || pendingImports)return;
   syncBusy=true;clearTimeout(syncTimer);syncMessage('Checking the shared library on GitHub…');
@@ -554,17 +604,17 @@ async function syncLibrary() {
       const needsWrite=GPXSync.canonical(doc)!==GPXSync.canonical(remoteCore);
       if(needsWrite && !githubToken) {
         // Keep the old baseline: without a successful upload, these remain pending changes.
-        persistSync(doc,syncBase,true);refreshAfterSync();
+        await persistSync(doc,syncBase,true);refreshAfterSync();
         syncMessage('Shared tracks loaded. Local changes are pending; connect a GitHub token to save them.',true);return;
       }
       // Save a recoverable local snapshot BEFORE uploading. A failed PUT remains pending.
       const newBase=await GPXSync.fingerprints(remote.doc.tracks);
-      persistSync(doc,newBase,needsWrite);
+      await persistSync(doc,newBase,needsWrite);
       if(needsWrite) {
         try {await api.write(doc,remote.sha);}
         catch(e) {if((e.status===409 || e.status===422) && attempt<2)continue;throw e;}
       }
-      persistSync(doc,await GPXSync.fingerprints(doc.tracks),false);refreshAfterSync();
+      await persistSync(doc,await GPXSync.fingerprints(doc.tracks),false);refreshAfterSync();
       const unresolved=doc.tracks.filter(t=>t.syncConflictOf).length;
       syncMessage('Synced with GitHub · '+doc.tracks.length+' tracks'+(unresolved?' · '+unresolved+' conflict copies need review.':'.'),!!unresolved);
       return;
@@ -575,10 +625,10 @@ async function syncLibrary() {
     syncMessage('Sync incomplete: '+e.message+' Changes remain on this device; retry with Sync now.',true);
   } finally {syncBusy=false;$('btnSync').disabled=false;}
 }
-function load() {
+async function load() {
   tracks = BUILTIN_TRACKS.map(t=>({...t}));
   try {
-    lastStorageRaw = localStorage.getItem(STORAGE_KEY);
+    lastStorageRaw = await migrateLibraryStorage();
     if (!lastStorageRaw) { report('Library ready. Back up your library before clearing browser data.'); return; }
     const data=JSON.parse(lastStorageRaw);
     const saved=validateTracks(Array.isArray(data) ? data : data.version===2 ? data.tracks : null);
@@ -587,29 +637,31 @@ function load() {
     deletedBuiltin = Array.isArray(data.deletedBuiltin) ? data.deletedBuiltin.filter(x=>typeof x==='string') : [];
     const merged = new Map((data._sync ? [] : tracks.filter(t=>!deletedBuiltin.includes(t.id)&&!deletedTrackIds.includes(t.id))).map(t=>[t.id,t]));
     saved.forEach(t=>merged.set(t.id,t)); tracks=[...merged.values()];
-    report(`Loaded ${tracks.length} tracks from this browser. Back up regularly.`);
+    report(`Loaded ${tracks.length} tracks from the device cache. Checking GitHub for updates.`);
   } catch(e) {
     storageLocked=true;
     report('Could not read your saved library: '+e.message+' Existing browser data has been left untouched. Use Back up to preserve recovery data, then Restore a valid backup.',true);
   }
 }
-function commitLibrary(next, deleted=deletedBuiltin, recovery=false, extraDeleted=[]) {
-  if(syncBusy){report('Sync is in progress. Your edit is still open; try saving again in a moment.',true);return false;}
+let localSaveBusy=false;
+async function commitLibrary(next, deleted=deletedBuiltin, recovery=false, extraDeleted=[]) {
+  if(syncBusy || localSaveBusy){report('A save or sync is in progress. Your edit is still open; try saving again in a moment.',true);return false;}
   if (storageLocked && !recovery) { report('Saving is blocked to protect unreadable library data. Back up recovery data, then restore a valid library.',true); return false; }
+  localSaveBusy=true;
   try {
     validateTracks(next);
-    const current=localStorage.getItem(STORAGE_KEY);
+    const current=await readLibraryRaw();
     if (current!==lastStorageRaw) throw Error('The library changed in another tab. Reload this page before trying again.');
     const removed=tracks.filter(t=>!next.some(n=>n.id===t.id)).map(t=>t.id);
     const tombstones=[...new Set([...deletedTrackIds,...removed,...deleted,...extraDeleted])].filter(id=>!next.some(t=>t.id===id));
     const raw=JSON.stringify({...libraryPayload(next,deleted),deletedTrackIds:tombstones,_sync:{base:syncBase,pending:true}});
-    localStorage.setItem(STORAGE_KEY,raw);
+    await writeLibraryRaw(raw,lastStorageRaw);
     lastStorageRaw=raw; tracks=next; deletedBuiltin=deleted; deletedTrackIds=tombstones; storageLocked=false;syncPending=true;queueSync();
     return true;
   } catch(e) {
-    report('NOT SAVED: '+e.message+' Your previous library is unchanged. Keep the original file or your edit open, and back up the library before freeing browser storage.',true);
+    report('NOT SAVED: '+e.message+' Your previous library is unchanged. Keep the original file or your edit open, and retry.',true);
     return false;
-  }
+  } finally {localSaveBusy=false;}
 }
 // Preserve segment boundaries; never connect separate tracks, routes, or waypoints.
 function haversine(a,b) {
@@ -731,7 +783,7 @@ async function importFiles(files) {
         if(duplicate && !confirm(`This path matches “${duplicate.track.name}”, but timestamps are missing, so it may be the same track. Add it as a separate trip anyway? Choose Cancel to skip it.`)) {duplicates++;continue;}
         const name=parsed.gpxName || file.name.replace(/\.gpx$/i,'');
         const track={id:uid(),name,date:parsed.gpxDate||'',tags:[],notes:parsed.description,gpxData:text,coords:parsed.coords,builtin:false,importedAt:new Date().toISOString(),sourceFile:file.name};
-        if(!commitLibrary([...tracks,track])) { failures.push(file.name+': '+$('libraryStatus').textContent);break; }
+        if(!await commitLibrary([...tracks,track])) { failures.push(file.name+': '+$('libraryStatus').textContent);break; }
         added++;selectTrack(track.id,false);
       } catch(e) { failures.push(file.name+': '+e.message); }
     }
@@ -812,21 +864,21 @@ function openEdit(id) {
   $('editName').focus();
 }
 function closeEdit() { $('modalBackdrop').classList.remove('open');editingId=null; }
-function saveEdit() {
+async function saveEdit() {
   const id=editingId,t=tracks.find(t=>t.id===id);if(!t)return;
   const name=$('editName').value.trim();if(!name){report('Enter a track name before saving.',true);return;}
   const ref={};
   for(const [id,key] of [['editDistance','referenceDistance'],['editDuration','referenceDuration'],['editMax','referenceMax']]) {const value=$(id).value.trim();ref[key]=value===''?null:Number(value);if(ref[key]!==null&&(!finite(ref[key])||ref[key]<0)) {report('Enter valid non-negative reference summary numbers.',true);return;}}
   const changedReferences=Object.keys(ref).some(k=>ref[k]!== (t[k]??null));
   const updated={...t,...ref,referenceSource:changedReferences?'Manual reference':t.referenceSource,name,date:$('editDate').value,tags:[...new Set($('editTags').value.split(',').map(s=>s.trim()).filter(Boolean))],notes:$('editNotes').value.trim()};
-  if(!commitLibrary(tracks.map(x=>x.id===id?updated:x)))return;
-  closeEdit();renderList();if(activeId===id)selectTrack(id,false);report('Track changes saved in this browser.');
+  if(!await commitLibrary(tracks.map(x=>x.id===id?updated:x)))return;
+  closeEdit();renderList();if(activeId===id)selectTrack(id,false);report('Track changes saved on this device; GitHub sync pending.');
 }
-function deleteTrack(id) {
+async function deleteTrack(id) {
   const t=tracks.find(t=>t.id===id);if(!t)return;
   if(!confirm(`Remove “${t.name}” from this library? Download a backup first if you may need it again.`))return;
   const deleted=BUILTIN_TRACKS.some(x=>x.id===id)?[...new Set([...deletedBuiltin,id])]:deletedBuiltin;
-  if(!commitLibrary(tracks.filter(x=>x.id!==id),deleted))return;
+  if(!await commitLibrary(tracks.filter(x=>x.id!==id),deleted))return;
   selectedLegs.delete(id);
   if(activeId===id){activeId=null;mapLayers.forEach(l=>map.removeLayer(l));mapLayers=[];$('trackDetail').classList.remove('visible');$('mapPlaceholder').style.display='flex';}
   renderList();report('Track removed and library saved.');
@@ -848,7 +900,7 @@ async function restoreLibrary(file) {
     GPXSync.validate(data,validateTracks);
     if(!Array.isArray(data.deletedBuiltin) || !data.deletedBuiltin.every(x=>typeof x==='string'))throw Error('Invalid deleted-track record.');
     if(!confirm(`Replace this browser’s library with ${data.tracks.length} tracks from the backup? Back up the current library first if needed.`))return;
-    if(!commitLibrary(data.tracks,data.deletedBuiltin,true,data.deletedTrackIds||[]))return;
+    if(!await commitLibrary(data.tracks,data.deletedBuiltin,true,data.deletedTrackIds||[]))return;
     selectedLegs.clear();activeId=null;renderList();
     if(tracks.length)selectTrack(getFiltered()[0].id);else{$('trackDetail').classList.remove('visible');mapLayers.forEach(l=>map.removeLayer(l));mapLayers=[];}
     report(`Restored and saved ${tracks.length} tracks. Your map key was not changed.`);
@@ -913,7 +965,7 @@ async function shareTrack(id) {
     await navigator.clipboard.writeText(url);report('Share link copied. It contains geometry, available point times, reference summaries, and notes. The map key is not included.');
   }catch(e){report('Share failed: '+e.message,true);}
 }
-function handleShareUrl() {
+async function handleShareUrl() {
   if(!location.hash.startsWith('#share='))return false;
   try {
     const p=JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(7)))));
@@ -921,11 +973,11 @@ function handleShareUrl() {
     const existing=tracks.find(x=>x.name===t.name&&x.date===t.date);
     if(existing){selectTrack(existing.id);report('A track with this name and date already exists; the shared track was not added.');return true;}
     if(!confirm(`Add shared track “${t.name}” (${t.coords.length} points) to this browser’s library?`))return false;
-    if(!commitLibrary([...tracks,t]))return false;
+    if(!await commitLibrary([...tracks,t]))return false;
     selectTrack(t.id);history.replaceState(null,'',location.pathname+location.search);report(t.pointTimes?.some(finite)?'Shared track saved with available timing.':'Shared track saved. This link contains no recorded point timing.');return true;
   }catch(e){report('Shared track could not be loaded: '+e.message,true);return false;}
 }
-function init() {
+async function init() {
   $('btnGitHub').addEventListener('click',()=>{$('githubToken').value='';$('githubToken').placeholder=githubToken?'A token is saved; paste to replace it.':'Paste your GitHub token';$('githubConnectionStatus').textContent='Test connection only checks your GitHub account and repository access. It does not sync or change tracks.';$('githubSettings').showModal();});
   $('closeGitHub').addEventListener('click',()=>$('githubSettings').close());
   $('githubSettings').addEventListener('close',()=>{$('githubToken').value='';});
@@ -962,7 +1014,7 @@ function init() {
   window.addEventListener('online',()=>{if(!authenticationBlocked)syncLibrary();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden && !authenticationBlocked)syncLibrary();});
   setInterval(()=>{if(!document.hidden && !authenticationBlocked)syncLibrary();},60000);
-  load();renderList();const shared=handleShareUrl();if(!shared&&tracks.length)selectTrack(getFiltered()[0].id);
+  await load();renderList();const shared=await handleShareUrl();if(!shared&&tracks.length)selectTrack(getFiltered()[0].id);
   const dz=$('dropZone');dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
   dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
   // A single body handler prevents the same dropped file from being imported twice.
