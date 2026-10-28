@@ -54715,7 +54715,7 @@
     },
     {
       "id": "c820acd2-e9dd-4c2c-9cb4-91276695e836",
-      "name": "T_10_27_26_1",
+      "name": "Coinjock, NC to Beaufort, NC",
       "date": "2026-10-27",
       "tags": [],
       "notes": "Your track",
@@ -79056,7 +79056,10 @@
       ],
       "builtin": false,
       "importedAt": "2026-10-28T23:41:07.234Z",
-      "sourceFile": "T_10_27_26_1.gpx"
+      "sourceFile": "T_10_27_26_1.gpx",
+      "referenceDistance": null,
+      "referenceDuration": null,
+      "referenceMax": null
     },
     {
       "id": "3924a6b7-e0d0-4d0d-a178-ad39704d8390",
