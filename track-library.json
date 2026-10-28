@@ -166558,7 +166558,7 @@
     },
     {
       "id": "9a9fa64d-cabf-40c5-9faf-ad978be30536",
-      "name": "T_10_25_26_3",
+      "name": "Hampton, VA to Norfolk,VA",
       "date": "2026-10-25",
       "tags": [],
       "notes": "Your track",
@@ -169991,7 +169991,10 @@
       ],
       "builtin": false,
       "importedAt": "2026-10-28T23:54:01.359Z",
-      "sourceFile": "T_10_25_26_3.gpx"
+      "sourceFile": "T_10_25_26_3.gpx",
+      "referenceDistance": null,
+      "referenceDuration": null,
+      "referenceMax": null
     }
   ],
   "deletedBuiltin": [],
